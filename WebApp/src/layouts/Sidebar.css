@@ -32,8 +32,22 @@
   width: 100%;
 }
 
-.sidebar-title {
+.sidebar-header {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
   width: 100%;
+}
+
+.sidebar-logo {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.sidebar-title {
   font-family: var(--font-family);
   font-style: normal;
   font-weight: 500;
@@ -41,6 +55,7 @@
   line-height: 24px;
   color: var(--color-text-primary);
   margin: 0;
+  flex: 1;
 }
 
 .sidebar-nav {
@@ -112,6 +127,16 @@
   
   .sidebar-content {
     width: 280px;
+  }
+  
+  .sidebar-logo {
+    width: 28px;
+    height: 28px;
+  }
+  
+  .sidebar-title {
+    font-size: 14px;
+    line-height: 20px;
   }
 }
 

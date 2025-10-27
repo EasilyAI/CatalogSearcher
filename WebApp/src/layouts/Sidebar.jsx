@@ -78,7 +78,14 @@ const Sidebar = () => {
     <div className="sidebar">
       <div className="sidebar-content">
         <div className="sidebar-top">
-          <h4 className="sidebar-title">BTS Quotation Assistant</h4>
+          <div className="sidebar-header">
+            <img 
+              src="/images/Hirshberg - logo.png" 
+              alt="Hirshberg Group Logo" 
+              className="sidebar-logo"
+            />
+            <h4 className="sidebar-title">Quotation Assistant</h4>
+          </div>
           <nav className="sidebar-nav">
             {menuItems.map((item) => (
               <Link
