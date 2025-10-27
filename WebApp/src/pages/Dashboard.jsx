@@ -1,34 +1,16 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { getDraftQuotations, getRecentQuotations } from '../data/mockQuotations';
 import './Dashboard.css';
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('open-drafts');
 
-  const quotations = [
-    {
-      id: 1,
-      name: 'Leon levi 10 valves',
-      createdAt: '2024-01-20',
-      customer: 'Leon levi',
-      status: 'draft'
-    },
-    {
-      id: 2,
-      name: 'Intel December 2025',
-      createdAt: '2024-01-20',
-      customer: 'Intel',
-      status: 'draft'
-    },
-    {
-      id: 3,
-      name: 'Quotation 2',
-      createdAt: '2024-01-18',
-      customer: 'Customer B',
-      status: 'draft'
-    }
-  ];
+  const draftQuotations = getDraftQuotations();
+  const recentQuotations = getRecentQuotations(3);
+  
+  const displayedQuotations = activeTab === 'open-drafts' ? draftQuotations : recentQuotations;
 
   const uploads = [
     {
@@ -48,7 +30,7 @@ const Dashboard = () => {
   ];
 
   const handleNewQuotation = () => {
-    navigate('/quotations');
+    navigate('/quotations/edit/new');
   };
 
   const handleSearchProduct = () => {
@@ -57,6 +39,17 @@ const Dashboard = () => {
 
   const handleUploadFile = () => {
     navigate('/multi-search');
+  };
+
+  const handleEditQuotation = (id) => {
+    navigate(`/quotations/edit/${id}`);
+  };
+
+  const handleDeleteQuotation = (id) => {
+    if (window.confirm('Are you sure you want to delete this quotation?')) {
+      // TODO: Implement delete API call
+      console.log('Delete quotation:', id);
+    }
   };
 
   return (
@@ -88,7 +81,8 @@ const Dashboard = () => {
 
         {/* Quotations Section */}
         <div className="dashboard-section quotations-header">
-          <h2 className="section-title">Quotations</h2>
+          <h2 className="section-title">Continue Your Work</h2>
+          <p className="section-subtitle">Pick up where you left off with your quotations</p>
         </div>
 
         {/* Tabs */}
@@ -98,12 +92,14 @@ const Dashboard = () => {
               className={`tab ${activeTab === 'open-drafts' ? 'active' : ''}`}
               onClick={() => setActiveTab('open-drafts')}
             >
-              Open Drafts
+              <span className="tab-icon">✏️</span>
+              Open Drafts ({draftQuotations.length})
             </button>
             <button
               className={`tab ${activeTab === 'recent' ? 'active' : ''}`}
               onClick={() => setActiveTab('recent')}
             >
+              <span className="tab-icon">📋</span>
               Recent
             </button>
           </div>
@@ -122,16 +118,32 @@ const Dashboard = () => {
                 </tr>
               </thead>
               <tbody>
-                {quotations.map((quotation) => (
-                  <tr key={quotation.id}>
-                    <td className="col-quotation-name">{quotation.name}</td>
-                    <td className="col-created-at text-secondary">{quotation.createdAt}</td>
+                {displayedQuotations.map((quotation) => (
+                  <tr key={quotation.id} className={quotation.incompleteItems > 0 ? 'has-incomplete' : ''}>
+                    <td className="col-quotation-name">
+                      <div className="quotation-name-cell">
+                        {quotation.name}
+                        {quotation.incompleteItems > 0 && (
+                          <span className="incomplete-badge-small">{quotation.incompleteItems} incomplete</span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="col-created-at text-secondary">{quotation.createdDate}</td>
                     <td className="col-customer text-secondary">{quotation.customer}</td>
                     <td className="col-actions">
                       <div className="action-links">
-                        <button className="action-link">Keep</button>
-                        <button className="action-link">Edit</button>
-                        <button className="action-link">Delete</button>
+                        <button 
+                          className="action-link primary-action"
+                          onClick={() => handleEditQuotation(quotation.id)}
+                        >
+                          {quotation.incompleteItems > 0 ? 'Continue →' : 'Edit'}
+                        </button>
+                        <button 
+                          className="action-link danger"
+                          onClick={() => handleDeleteQuotation(quotation.id)}
+                        >
+                          Delete
+                        </button>
                       </div>
                     </td>
                   </tr>

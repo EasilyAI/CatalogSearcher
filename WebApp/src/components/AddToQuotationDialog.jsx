@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { mockQuotations } from '../data/mockQuotations';
 import './AddToQuotationDialog.css';
 
 const AddToQuotationDialog = ({
@@ -11,16 +12,6 @@ const AddToQuotationDialog = ({
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Mock data for quotations
-  const mockQuotations = [
-    { id: "Q-2024-001", name: "Industrial Valve Project", createdDate: "2024-10-20", itemCount: 15, status: "open" },
-    { id: "Q-2024-002", name: "High Pressure Systems", createdDate: "2024-10-22", itemCount: 8, status: "open" },
-    { id: "Q-2024-003", name: "NPT Valve Assembly", createdDate: "2024-10-23", itemCount: 12, status: "open" },
-    { id: "Q-2024-004", name: "Swaglok Components Q4", createdDate: "2024-10-25", itemCount: 23, status: "open" },
-    { id: "Q-2024-005", name: "Motor and Valve Package", createdDate: "2024-10-26", itemCount: 6, status: "draft" },
-    { id: "Q-2024-006", name: "SS360 Materials Order", createdDate: "2024-10-27", itemCount: 18, status: "open" },
-  ];
-
   const filteredQuotations = useMemo(() => {
     if (!searchQuery.trim()) {
       return mockQuotations;
@@ -30,7 +21,8 @@ const AddToQuotationDialog = ({
     return mockQuotations.filter(
       (q) =>
         q.name.toLowerCase().includes(query) ||
-        q.id.toLowerCase().includes(query)
+        q.quotationNumber.toLowerCase().includes(query) ||
+        q.customer.toLowerCase().includes(query)
     );
   }, [searchQuery]);
 
@@ -91,12 +83,14 @@ const AddToQuotationDialog = ({
               >
                 <div className="quotation-header">
                   <span className="quotation-name">{quotation.name}</span>
-                  <span className={`quotation-status status-${quotation.status}`}>
-                    {quotation.status.toUpperCase()}
+                  <span className={`quotation-status status-${quotation.status.replace(/ /g, '-')}`}>
+                    {quotation.status.replace(/-/g, ' ').toUpperCase()}
                   </span>
                 </div>
                 <div className="quotation-details">
-                  <span>{quotation.id}</span>
+                  <span>{quotation.quotationNumber}</span>
+                  <span>•</span>
+                  <span>{quotation.customer}</span>
                   <span>•</span>
                   <span>{quotation.itemCount} items</span>
                   <span>•</span>

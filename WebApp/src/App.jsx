@@ -7,7 +7,9 @@ import Files from './pages/Files';
 import SingleSearch from './pages/SingleSearch';
 import MultiItemSearch from './pages/MultiItemSearch';
 import Quotations from './pages/Quotations';
+import EditQuotation from './pages/EditQuotation';
 import Settings from './pages/Settings';
+import ProductPage from './pages/ProductPage';
 import './styles/globals.css';
 
 function App() {
@@ -25,7 +27,9 @@ function App() {
           <Route path="search" element={<SingleSearch />} />
           <Route path="multi-search" element={<MultiItemSearch />} />
           <Route path="quotations" element={<Quotations />} />
+          <Route path="quotations/edit/:id" element={<EditQuotation />} />
           <Route path="settings" element={<Settings />} />
+          <Route path="product/:orderingNo" element={<ProductPage />} />
         </Route>
         
         {/* Catch all - redirect to dashboard */}

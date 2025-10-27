@@ -1,86 +1,283 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './MultiItemSearch.css';
 
 const MultiItemSearch = () => {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('all');
   const [uploadedFile, setUploadedFile] = useState(null);
-  const [items, setItems] = useState([
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  // Check if we should restore previous batch search state
+  const restoreBatchSearchState = () => {
+    const savedState = sessionStorage.getItem('batchSearchState');
+    if (savedState) {
+      try {
+        const parsed = JSON.parse(savedState);
+        return parsed;
+      } catch (e) {
+        console.error('Failed to restore batch search state:', e);
+      }
+    }
+    return null;
+  };
+
+  // Initialize with restored state if available
+  const restoredState = restoreBatchSearchState();
+  const [items, setItems] = useState(restoredState?.items || [
     {
       id: 1,
       itemNumber: 1,
-      productType: 'Sensor',
-      requestedItem: 'Part Number 12345',
-      quantity: 1,
+      productType: 'Valve',
+      requestedItem: 'High pressure NPT valve SS360',
+      quantity: 2,
       status: 'Match Found',
       isExpanded: false,
-      matchDetails: {
-        manufacturer: 'SensorTech Inc.',
-        partNumber: 'ST-12345',
-        price: '$45.99',
-        availability: 'In Stock'
-      }
+      selectedMatch: null,
+      matches: [
+        {
+          id: 'M1-1',
+          productName: 'high pressure NPT valve',
+          orderingNo: 'SS-10-2345',
+          confidence: 88,
+          type: 'Valve',
+          specifications: 'Material: SS360 Pressure: 230 psi'
+        },
+        {
+          id: 'M1-2',
+          productName: 'Advanced Industrial Motor',
+          orderingNo: 'SS-109-12345',
+          confidence: 85,
+          type: 'Valve',
+          specifications: 'Material: SS360 Pressure: 230 psi'
+        },
+        {
+          id: 'M1-3',
+          productName: 'half tube valve',
+          orderingNo: 'HT-360-S98FT',
+          confidence: 82,
+          type: 'Valve',
+          specifications: 'Material: SS360 Pressure: 230 psi'
+        }
+      ]
     },
     {
       id: 2,
       itemNumber: 2,
-      productType: 'Sensor',
-      requestedItem: 'Description: Sensor X',
+      productType: 'Cylinder',
+      requestedItem: 'Standard Cylinder 50mm bore',
       quantity: 5,
       status: 'Match Found',
       isExpanded: false,
-      matchDetails: {
-        manufacturer: 'Industrial Sensors Ltd.',
-        partNumber: 'IS-SX-100',
-        price: '$32.50',
-        availability: 'In Stock'
-      }
+      selectedMatch: null,
+      matches: [
+        {
+          id: 'M2-1',
+          productName: 'Standard Cylinder Assembly',
+          orderingNo: 'CYL-450-X',
+          confidence: 92,
+          type: 'Cylinder',
+          specifications: 'Bore: 50mm Stroke: 100mm'
+        },
+        {
+          id: 'M2-2',
+          productName: 'Compact Cylinder Pro',
+          orderingNo: 'CYL-C50-200',
+          confidence: 78,
+          type: 'Cylinder',
+          specifications: 'Bore: 50mm Stroke: 200mm'
+        }
+      ]
     },
     {
       id: 3,
       itemNumber: 3,
-      productType: 'Part',
-      requestedItem: 'Part Number 98765',
-      quantity: 2,
-      status: 'Match Found',
+      productType: 'Tube',
+      requestedItem: 'Heavy duty tube 25mm diameter',
+      quantity: 10,
+      status: 'Unmatched',
       isExpanded: false,
-      matchDetails: {
-        manufacturer: 'Parts Pro',
-        partNumber: 'PP-98765',
-        price: '$125.00',
-        availability: 'Limited Stock'
-      }
+      selectedMatch: null,
+      matches: []
     },
     {
       id: 4,
       itemNumber: 4,
-      productType: 'Valve',
-      requestedItem: 'Description: Valve A',
-      quantity: 10,
+      productType: 'Fitting',
+      requestedItem: '1/4 NPT thread fitting SS316',
+      quantity: 15,
       status: 'Match Found',
       isExpanded: false,
-      matchDetails: {
-        manufacturer: 'ValveCorp',
-        partNumber: 'VC-A-200',
-        price: '$89.99',
-        availability: 'In Stock'
-      }
+      selectedMatch: null,
+      matches: [
+        {
+          id: 'M4-1',
+          productName: 'Precision Fitting Pro',
+          orderingNo: 'FIT-200-SS',
+          confidence: 95,
+          type: 'Fitting',
+          specifications: 'Thread: 1/4 NPT Material: SS316'
+        }
+      ]
     },
     {
       id: 5,
       itemNumber: 5,
-      productType: 'Part',
-      requestedItem: 'Part Number 45678',
+      productType: 'Regulator',
+      requestedItem: 'Pressure regulator 150 psi',
       quantity: 3,
       status: 'Match Found',
       isExpanded: false,
-      matchDetails: {
-        manufacturer: 'Generic Parts Inc.',
-        partNumber: 'GP-45678',
-        price: '$15.75',
-        availability: 'In Stock'
-      }
+      selectedMatch: null,
+      matches: [
+        {
+          id: 'M5-1',
+          productName: 'Compact Regulator',
+          orderingNo: 'REG-C-777',
+          confidence: 90,
+          type: 'Regulator',
+          specifications: 'Max Pressure: 150 psi'
+        },
+        {
+          id: 'M5-2',
+          productName: 'Industrial Regulator HD',
+          orderingNo: 'REG-HD-888',
+          confidence: 85,
+          type: 'Regulator',
+          specifications: 'Max Pressure: 200 psi'
+        }
+      ]
+    },
+    {
+      id: 6,
+      itemNumber: 6,
+      productType: 'Valve',
+      requestedItem: 'Brass valve 200 psi',
+      quantity: 8,
+      status: 'Match Found',
+      isExpanded: false,
+      selectedMatch: null,
+      matches: [
+        {
+          id: 'M6-1',
+          productName: 'Ultra Valve Premium',
+          orderingNo: 'UV-PREM-88',
+          confidence: 87,
+          type: 'Valve',
+          specifications: 'Material: Brass Pressure: 200 psi'
+        }
+      ]
+    },
+    {
+      id: 7,
+      itemNumber: 7,
+      productType: 'Sensor',
+      requestedItem: 'Temperature sensor -20 to 150C',
+      quantity: 4,
+      status: 'Unmatched',
+      isExpanded: false,
+      selectedMatch: null,
+      matches: []
+    },
+    {
+      id: 8,
+      itemNumber: 8,
+      productType: 'Valve',
+      requestedItem: 'Ball valve 1/2 inch',
+      quantity: 6,
+      status: 'Match Found',
+      isExpanded: false,
+      selectedMatch: null,
+      matches: [
+        {
+          id: 'M8-1',
+          productName: 'Ball Valve Professional',
+          orderingNo: 'BV-PRO-500',
+          confidence: 93,
+          type: 'Valve',
+          specifications: 'Size: 1/2 inch Material: SS304'
+        },
+        {
+          id: 'M8-2',
+          productName: 'Ball Valve Economy',
+          orderingNo: 'BV-ECO-500',
+          confidence: 88,
+          type: 'Valve',
+          specifications: 'Size: 1/2 inch Material: Brass'
+        }
+      ]
+    },
+    {
+      id: 9,
+      itemNumber: 9,
+      productType: 'Filter',
+      requestedItem: 'Air filter 40 micron',
+      quantity: 12,
+      status: 'Unmatched',
+      isExpanded: false,
+      selectedMatch: null,
+      matches: []
+    },
+    {
+      id: 10,
+      itemNumber: 10,
+      productType: 'Tube',
+      requestedItem: 'Flexible tube 8mm',
+      quantity: 20,
+      status: 'Match Found',
+      isExpanded: false,
+      selectedMatch: null,
+      matches: [
+        {
+          id: 'M10-1',
+          productName: 'Flexible Tube Standard',
+          orderingNo: 'FT-STD-8',
+          confidence: 91,
+          type: 'Tube',
+          specifications: 'Diameter: 8mm Length: Variable'
+        }
+      ]
+    },
+    {
+      id: 11,
+      itemNumber: 11,
+      productType: 'Connector',
+      requestedItem: 'Quick connector 6mm',
+      quantity: 25,
+      status: 'Match Found',
+      isExpanded: false,
+      selectedMatch: null,
+      matches: [
+        {
+          id: 'M11-1',
+          productName: 'Quick Connect Pro',
+          orderingNo: 'QC-PRO-6',
+          confidence: 89,
+          type: 'Connector',
+          specifications: 'Size: 6mm Type: Push-to-connect'
+        }
+      ]
+    },
+    {
+      id: 12,
+      itemNumber: 12,
+      productType: 'Gauge',
+      requestedItem: 'Pressure gauge 0-300 psi',
+      quantity: 7,
+      status: 'Unmatched',
+      isExpanded: false,
+      selectedMatch: null,
+      matches: []
     }
   ]);
+
+  // Set uploaded file if restoring state
+  React.useEffect(() => {
+    if (restoredState?.uploadedFileName) {
+      setUploadedFile({ name: restoredState.uploadedFileName });
+    }
+  }, []);
 
   const handleFileUpload = (event) => {
     const file = event.target.files[0];
@@ -96,150 +293,459 @@ const MultiItemSearch = () => {
     ));
   };
 
-  const filteredItems = activeTab === 'all' ? items : items.filter(item => item.status !== 'Match Found');
+  const handleChooseMatch = (itemId, matchId) => {
+    setItems(items.map(item => {
+      if (item.id === itemId) {
+        return {
+          ...item,
+          selectedMatch: matchId,
+          status: 'Match Found',
+          isExpanded: false
+        };
+      }
+      return item;
+    }));
+  };
 
-  const processedCount = items.filter(item => item.status === 'Match Found').length;
+  const filteredItems = activeTab === 'all' 
+    ? items 
+    : activeTab === 'unmatched' 
+    ? items.filter(item => item.matches.length === 0)
+    : activeTab === 'not-chosen'
+    ? items.filter(item => item.matches.length > 0 && !item.selectedMatch && !item.manualOrderingNo)
+    : items;
+
+  // Pagination
+  const totalPages = Math.ceil(filteredItems.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedItems = filteredItems.slice(startIndex, startIndex + itemsPerPage);
+
+  // Calculate stats
   const totalCount = items.length;
+  const matchedCount = items.filter(item => item.selectedMatch).length;
+  const manualCount = items.filter(item => item.manualOrderingNo).length;
+  const notChosenCount = items.filter(item => item.matches.length > 0 && !item.selectedMatch && !item.manualOrderingNo).length;
+  const noMatchesCount = items.filter(item => item.matches.length === 0 && !item.manualOrderingNo).length;
+  const processedCount = matchedCount + manualCount;
   const progressPercentage = (processedCount / totalCount) * 100;
+
+  const handleSaveToQuotation = () => {
+    // Convert all items to quotation format (both complete and incomplete)
+    const quotationItems = items.map(item => {
+      const selectedMatchData = item.selectedMatch 
+        ? item.matches.find(m => m.id === item.selectedMatch)
+        : null;
+      
+      // Check if manually entered or matched
+      const hasOrderingNumber = selectedMatchData || item.manualOrderingNo;
+      const isIncomplete = !hasOrderingNumber;
+      
+      return {
+        orderNo: item.itemNumber,
+        orderingNumber: selectedMatchData?.orderingNo || item.manualOrderingNo || '',
+        requestedItem: item.requestedItem,
+        productName: selectedMatchData?.productName || item.requestedItem,
+        productType: item.productType,
+        quantity: item.quantity,
+        price: 0, // Price to be filled in quotation
+        margin: 20,
+        sketchFile: null,
+        catalogLink: '',
+        notes: selectedMatchData 
+          ? `Confidence: ${selectedMatchData.confidence}%` 
+          : item.manualOrderingNo 
+          ? 'Manually entered'
+          : 'Needs ordering number - return to batch search',
+        isIncomplete: isIncomplete
+      };
+    });
+
+    if (quotationItems.length === 0) {
+      alert('No items to save to quotation.');
+      return;
+    }
+
+    const incompleteCount = quotationItems.filter(item => item.isIncomplete).length;
+    const confirmMessage = incompleteCount > 0
+      ? `You have ${incompleteCount} item(s) without ordering numbers. You can complete them later from the quotation. Continue?`
+      : 'Save all items to quotation?';
+
+    if (!window.confirm(confirmMessage)) {
+      return;
+    }
+
+    // Save batch search state to sessionStorage for later return
+    sessionStorage.setItem('batchSearchState', JSON.stringify({
+      uploadedFileName: uploadedFile?.name,
+      items: items,
+      timestamp: new Date().toISOString()
+    }));
+
+    // Navigate to new quotation with these items
+    navigate('/quotations/edit/new', { 
+      state: { 
+        items: quotationItems,
+        customer: 'New Customer',
+        source: 'batch-search',
+        batchSearchAvailable: true
+      } 
+    });
+  };
+
+  const handleDiscard = () => {
+    if (window.confirm('Are you sure you want to discard all changes?')) {
+      setUploadedFile(null);
+      setItems([]);
+      navigate('/dashboard');
+    }
+  };
 
   return (
     <div className="multi-item-search-page">
-      <div className="multi-item-search-main">
-        <div className="multi-item-search-content">
-          <div className="page-header">
-            <div className="page-title-section">
-              <h1 className="page-title">Batch Search & Verification</h1>
-              <p className="page-description">
-                Upload an Excel file with your product requests. Our system will search manufacturer catalogs and suggest matches.
-              </p>
-            </div>
-          </div>
+      <div className="multi-item-search-content">
+        {/* Breadcrumbs */}
+        <div className="breadcrumbs">
+          <button onClick={() => navigate('/dashboard')} className="breadcrumb-link">Home</button>
+          <span className="breadcrumb-separator">›</span>
+          <span className="breadcrumb-current">Batch Search & Verification</span>
+          <span className="breadcrumb-separator">›</span>
+          <span className="breadcrumb-next">Add to Quotation</span>
+        </div>
 
-          <div className="upload-section">
-            <input
-              type="file"
-              id="excel-upload"
-              accept=".xlsx,.xls"
-              onChange={handleFileUpload}
-              style={{ display: 'none' }}
-            />
-            <label htmlFor="excel-upload" className="upload-button">
-              <div className="upload-icon">
-                <svg fill="currentColor" height="20px" viewBox="0 0 256 256" width="20px" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M240,136v64a16,16,0,0,1-16,16H32a16,16,0,0,1-16-16V136a16,16,0,0,1,16-16H80a8,8,0,0,1,0,16H32v64H224V136H176a8,8,0,0,1,0-16h48A16,16,0,0,1,240,136ZM85.66,77.66,120,43.31V128a8,8,0,0,0,16,0V43.31l34.34,34.35a8,8,0,0,0,11.32-11.32l-48-48a8,8,0,0,0-11.32,0l-48,48A8,8,0,0,0,85.66,77.66ZM200,168a12,12,0,1,0-12,12A12,12,0,0,0,200,168Z"></path>
-                </svg>
+        {/* Restored State Banner */}
+        {restoredState && (
+          <div className="restored-state-banner">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <path d="M12 8V12L15 15M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+            <span>Continuing previous batch search • {restoredState.uploadedFileName}</span>
+            <button 
+              className="banner-close"
+              onClick={() => sessionStorage.removeItem('batchSearchState')}
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
+        {/* Page Header */}
+        <div className="search-header">
+          <div className="search-header-text">
+            <h1 className="search-title">Batch Search & Verification</h1>
+            <p className="search-subtitle">
+              Upload an Excel file with your product requests. Our system will search manufacturer catalogs and suggest matches.
+            </p>
+          </div>
+        </div>
+
+        {/* Upload Section */}
+        <div className="upload-section-wrapper">
+          <input
+            type="file"
+            id="excel-upload"
+            accept=".xlsx,.xls"
+            onChange={handleFileUpload}
+            style={{ display: 'none' }}
+          />
+          <label htmlFor="excel-upload" className="upload-button">
+            <div className="upload-icon">
+              <svg fill="currentColor" height="20px" viewBox="0 0 256 256" width="20px" xmlns="http://www.w3.org/2000/svg">
+                <path d="M240,136v64a16,16,0,0,1-16,16H32a16,16,0,0,1-16-16V136a16,16,0,0,1,16-16H80a8,8,0,0,1,0,16H32v64H224V136H176a8,8,0,0,1,0-16h48A16,16,0,0,1,240,136ZM85.66,77.66,120,43.31V128a8,8,0,0,0,16,0V43.31l34.34,34.35a8,8,0,0,0,11.32-11.32l-48-48a8,8,0,0,0-11.32,0l-48,48A8,8,0,0,0,85.66,77.66ZM200,168a12,12,0,1,0-12,12A12,12,0,0,0,200,168Z"></path>
+              </svg>
+            </div>
+            <span>Upload Excel File</span>
+          </label>
+          {uploadedFile && (
+            <div className="uploaded-file-marker">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M8 1L3 6H6V11H10V6H13L8 1Z" fill="currentColor"/>
+                <path d="M2 13H14V15H2V13Z" fill="currentColor"/>
+              </svg>
+              <span>{uploadedFile.name}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Show table only after file upload */}
+        {uploadedFile && (
+          <>
+            {/* Summary Stats */}
+            <div className="batch-summary">
+              <div className="summary-card">
+                <span className="summary-label">Total Items</span>
+                <span className="summary-value">{totalCount}</span>
               </div>
-              <span>Upload Excel File</span>
-            </label>
-          </div>
-
-          <div className="tabs-section">
-            <div className="tabs">
-              <button
-                className={`tab ${activeTab === 'all' ? 'active' : ''}`}
-                onClick={() => setActiveTab('all')}
-              >
-                All Items
-              </button>
-              <button
-                className={`tab ${activeTab === 'unmatched' ? 'active' : ''}`}
-                onClick={() => setActiveTab('unmatched')}
-              >
-                Unmatched Items
-              </button>
+              <div className="summary-card success">
+                <span className="summary-label">Matched</span>
+                <span className="summary-value">{matchedCount}</span>
+              </div>
+              <div className="summary-card info">
+                <span className="summary-label">Manual Entry</span>
+                <span className="summary-value">{manualCount}</span>
+              </div>
+              <div className="summary-card warning">
+                <span className="summary-label">Not Chosen</span>
+                <span className="summary-value">{notChosenCount}</span>
+              </div>
+              <div className="summary-card error">
+                <span className="summary-label">No Matches</span>
+                <span className="summary-value">{noMatchesCount}</span>
+              </div>
             </div>
-          </div>
 
-          <div className="table-section">
-            <div className="table-container">
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th className="expand-column"></th>
-                    <th>Item #</th>
-                    <th>Product Type</th>
-                    <th>Requested Item</th>
-                    <th>Quantity</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredItems.map((item) => (
-                    <React.Fragment key={item.id}>
-                      <tr className={item.isExpanded ? 'row-expanded' : ''}>
-                        <td className="expand-cell">
-                          <button onClick={() => toggleExpanded(item.id)} className="expand-button">
-                            <span className="expand-icon">
-                              {item.isExpanded ? '−' : '+'}
-                            </span>
-                          </button>
-                        </td>
-                        <td>{item.itemNumber}</td>
-                        <td>{item.productType}</td>
-                        <td>{item.requestedItem}</td>
-                        <td>{item.quantity}</td>
-                        <td>
-                          <div className="status-cell">
-                            <span className="status-icon">✓</span>
-                            <span>{item.status}</span>
-                          </div>
-                        </td>
-                      </tr>
-                      {item.isExpanded && (
-                        <tr className="expanded-row">
-                          <td colSpan="6">
-                            <div className="expanded-content">
-                              <div className="expanded-details">
-                                <div className="detail-item">
-                                  <span className="detail-label">Manufacturer:</span>
-                                  <span className="detail-value">{item.matchDetails.manufacturer}</span>
+            <div className="tabs-section">
+              <div className="tabs">
+                <button
+                  className={`tab ${activeTab === 'all' ? 'active' : ''}`}
+                  onClick={() => {
+                    setActiveTab('all');
+                    setCurrentPage(1);
+                  }}
+                >
+                  All Items ({totalCount})
+                </button>
+                <button
+                  className={`tab ${activeTab === 'not-chosen' ? 'active' : ''}`}
+                  onClick={() => {
+                    setActiveTab('not-chosen');
+                    setCurrentPage(1);
+                  }}
+                >
+                  Not Chosen ({notChosenCount})
+                </button>
+                <button
+                  className={`tab ${activeTab === 'unmatched' ? 'active' : ''}`}
+                  onClick={() => {
+                    setActiveTab('unmatched');
+                    setCurrentPage(1);
+                  }}
+                >
+                  No Matches ({noMatchesCount})
+                </button>
+              </div>
+            </div>
+
+            <div className="table-section">
+              <div className="table-container">
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th className="expand-column"></th>
+                      <th>Item #</th>
+                      <th>Product Type</th>
+                      <th>Requested Item</th>
+                      <th>Quantity</th>
+                      <th>Ordering Number</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {paginatedItems.map((item) => {
+                      const selectedMatchData = item.selectedMatch 
+                        ? item.matches.find(m => m.id === item.selectedMatch)
+                        : null;
+                      
+                      const orderingNumberDisplay = selectedMatchData
+                        ? selectedMatchData.orderingNo
+                        : item.matches.length > 0
+                        ? '− Not yet chosen'
+                        : '✗ No matches found';
+                      
+                      // Row coloring: green if has ordering number (matched or manual), yellow if pending, red if needs input
+                      const rowClassName = (selectedMatchData || item.manualOrderingNo)
+                        ? 'row-completed'
+                        : item.matches.length > 0 
+                        ? 'row-pending'
+                        : 'row-no-matches';
+                      
+                      return (
+                      <React.Fragment key={item.id}>
+                        <tr className={`${rowClassName} ${item.isExpanded ? 'row-expanded' : ''}`}>
+                          <td className="expand-cell">
+                            {item.matches.length > 0 && (
+                              <button onClick={() => toggleExpanded(item.id)} className="expand-button">
+                                <span className="expand-icon">
+                                  {item.isExpanded ? '−' : '+'}
+                                </span>
+                              </button>
+                            )}
+                          </td>
+                          <td>{item.itemNumber}</td>
+                          <td>{item.productType}</td>
+                          <td>{item.requestedItem}</td>
+                          <td>{item.quantity}</td>
+                          <td>
+                            <div className="ordering-number-cell">
+                              {selectedMatchData ? (
+                                <div className="ordering-number-wrapper">
+                                  <svg className="check-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                                    <path d="M13.5 4.5L6 12L2.5 8.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                  </svg>
+                                  <button 
+                                    className="ordering-number-link"
+                                    onClick={() => navigate(`/product/${selectedMatchData.orderingNo}`)}
+                                  >
+                                    {selectedMatchData.orderingNo}
+                                  </button>
                                 </div>
-                                <div className="detail-item">
-                                  <span className="detail-label">Part Number:</span>
-                                  <span className="detail-value">{item.matchDetails.partNumber}</span>
+                              ) : item.manualOrderingNo ? (
+                                <div className="ordering-number-wrapper">
+                                  <svg className="check-icon manual-check" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                                    <path d="M13.5 4.5L6 12L2.5 8.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                  </svg>
+                                  <button 
+                                    className="ordering-number-link manual-entry-link"
+                                    onClick={() => navigate(`/product/${item.manualOrderingNo}`)}
+                                  >
+                                    {item.manualOrderingNo}
+                                  </button>
+                                  <span className="manual-badge">Manual</span>
                                 </div>
-                                <div className="detail-item">
-                                  <span className="detail-label">Price:</span>
-                                  <span className="detail-value">{item.matchDetails.price}</span>
+                              ) : item.matches.length > 0 ? (
+                                <span className="ordering-number-pending">{orderingNumberDisplay}</span>
+                              ) : (
+                                <div className="manual-entry-wrapper">
+                                  <input
+                                    type="text"
+                                    className="manual-ordering-input"
+                                    placeholder="Enter ordering number manually"
+                                    defaultValue=""
+                                    onBlur={(e) => {
+                                      const value = e.target.value.trim();
+                                      if (value) {
+                                        setItems(items.map(itm => 
+                                          itm.id === item.id 
+                                            ? { ...itm, manualOrderingNo: value, status: 'Match Found' }
+                                            : itm
+                                        ));
+                                      }
+                                    }}
+                                  />
                                 </div>
-                                <div className="detail-item">
-                                  <span className="detail-label">Availability:</span>
-                                  <span className="detail-value">{item.matchDetails.availability}</span>
-                                </div>
-                              </div>
+                              )}
                             </div>
                           </td>
                         </tr>
-                      )}
-                    </React.Fragment>
-                  ))}
-                </tbody>
-              </table>
+                        {item.isExpanded && (
+                          <tr className="expanded-row">
+                            <td colSpan="6">
+                              <div className="expanded-content">
+                                <h4 className="expanded-title">Search Results for Item #{item.itemNumber}</h4>
+                                <div className="expanded-table-container">
+                                  <table className="expanded-results-table">
+                                    <thead>
+                                      <tr>
+                                        <th>Product Name</th>
+                                        <th>Ordering No.</th>
+                                        <th>Confidence</th>
+                                        <th>Type</th>
+                                        <th>Specifications</th>
+                                        <th>Actions</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {item.matches.map((match) => (
+                                        <tr key={match.id}>
+                                          <td>{match.productName}</td>
+                                          <td>
+                                            <span className="ordering-number">{match.orderingNo}</span>
+                                          </td>
+                                          <td>
+                                            <div className="confidence-wrapper">
+                                              <div className="confidence-bar-bg">
+                                                <div 
+                                                  className="confidence-bar-fill" 
+                                                  style={{ width: `${match.confidence}%` }}
+                                                ></div>
+                                              </div>
+                                              <span className="confidence-value">{match.confidence}</span>
+                                            </div>
+                                          </td>
+                                          <td className="text-secondary">{match.type}</td>
+                                          <td className="text-secondary">{match.specifications}</td>
+                                          <td>
+                                            <div className="match-actions">
+                                              <button 
+                                                className={`choose-match-btn ${item.selectedMatch === match.id ? 'selected' : ''}`}
+                                                onClick={() => handleChooseMatch(item.id, match.id)}
+                                              >
+                                                {item.selectedMatch === match.id ? 'Selected ✓' : 'Choose This'}
+                                              </button>
+                                              <div className="action-buttons-icon-group">
+                                                <button className="action-btn-icon" title="Open Catalog">
+                                                  📄
+                                                </button>
+                                                <button className="action-btn-icon" title="Swagelok Site">
+                                                  🌐
+                                                </button>
+                                                <button className="action-btn-icon" title="Open Sketch">
+                                                  📐
+                                                </button>
+                                              </div>
+                                            </div>
+                                          </td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
+                    );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
 
-          <div className="progress-section">
-            <div className="progress-header">
-              <p className="progress-title">Batch Progress</p>
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="pagination-section">
+                <button 
+                  className="pagination-btn"
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                >
+                  Previous
+                </button>
+                <div className="pagination-info">
+                  Page {currentPage} of {totalPages} ({filteredItems.length} items)
+                </div>
+                <button 
+                  className="pagination-btn"
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages}
+                >
+                  Next
+                </button>
+              </div>
+            )}
+
+            <div className="progress-section">
+              <div className="progress-header">
+                <p className="progress-title">Batch Progress</p>
+              </div>
+              <div className="progress-bar-container">
+                <div 
+                  className="progress-bar" 
+                  style={{ width: `${progressPercentage}%` }}
+                ></div>
+              </div>
+              <p className="progress-text">
+                <span className="progress-number">{processedCount}/{totalCount}</span> Items have ordering numbers ({Math.round(progressPercentage)}% Complete)
+              </p>
             </div>
-            <div className="progress-bar-container">
-              <div 
-                className="progress-bar" 
-                style={{ width: `${progressPercentage}%` }}
-              ></div>
+
+            <p className="autosave-text">Autosaving...</p>
+
+            <div className="action-buttons">
+              <button className="discard-button" onClick={handleDiscard}>Discard</button>
+              <button className="save-button" onClick={handleSaveToQuotation}>Save to Quotation</button>
             </div>
-            <p className="progress-text">
-              <span className="progress-number">{processedCount}/{totalCount}</span> Items Processed Correctly ({Math.round(progressPercentage)}% Complete)
-            </p>
-          </div>
-
-          <p className="autosave-text">Autosaving...</p>
-
-          <div className="action-buttons">
-            <button className="discard-button">Discard</button>
-            <button className="save-button">Save to Quotation</button>
-          </div>
-        </div>
+          </>
+        )}
       </div>
     </div>
   );

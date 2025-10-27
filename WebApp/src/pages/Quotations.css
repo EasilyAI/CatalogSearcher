@@ -1,4 +1,4 @@
-.dashboard {
+.quotations-page {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -7,7 +7,7 @@
   background: var(--color-background);
 }
 
-.dashboard-content {
+.quotations-content {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -17,16 +17,24 @@
   margin: 0 auto;
 }
 
-.dashboard-section {
+.quotations-section {
   width: 100%;
 }
 
-/* Welcome Section */
-.welcome-section {
+/* Header Section */
+.header-section {
   padding: 20px 16px 12px;
 }
 
-.dashboard-title {
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.page-title {
   font-family: var(--font-family);
   font-style: normal;
   font-weight: 700;
@@ -36,41 +44,43 @@
   margin: 0;
 }
 
-/* Section Headers */
-.quick-actions-header,
-.quotations-header,
-.uploads-header {
-  padding: 20px 16px 12px;
-}
-
-.section-title {
-  font-family: var(--font-family);
-  font-style: normal;
-  font-weight: 700;
-  font-size: 22px;
-  line-height: 28px;
-  color: var(--color-text-primary);
-  margin: 0;
-}
-
-/* Quick Actions */
-.quick-actions {
-  padding: 0px;
-}
-
-.quick-actions-buttons {
-  display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  align-content: flex-start;
+/* Filters Section */
+.filters-section {
   padding: 12px 16px;
-  gap: 12px;
 }
 
-.quick-actions-buttons button {
-  min-width: 84px;
-  max-width: 480px;
+.search-box {
+  position: relative;
+  width: 100%;
+}
+
+.search-box svg {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-text-secondary);
+}
+
+.search-box input {
+  width: 100%;
+  padding: 8px 12px 8px 40px;
+  font-family: var(--font-family);
+  font-size: 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-background);
+  color: var(--color-text-primary);
+  transition: border-color 0.2s ease;
+}
+
+.search-box input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.search-box input::placeholder {
+  color: var(--color-text-secondary);
 }
 
 /* Tabs Section */
@@ -85,6 +95,7 @@
   padding: 0px 16px;
   gap: 32px;
   border-bottom: 1px solid var(--color-border);
+  overflow-x: auto;
 }
 
 .tab {
@@ -101,8 +112,12 @@
   line-height: 21px;
   color: var(--color-text-secondary);
   background: none;
+  border-left: none;
+  border-right: none;
+  border-top: none;
   cursor: pointer;
   transition: all 0.2s ease;
+  white-space: nowrap;
 }
 
 .tab:hover {
@@ -127,20 +142,20 @@
   overflow: hidden;
 }
 
-.dashboard-table {
+.quotations-table {
   width: 100%;
   border-collapse: collapse;
 }
 
-.dashboard-table thead {
+.quotations-table thead {
   background: var(--color-background);
 }
 
-.dashboard-table thead tr {
+.quotations-table thead tr {
   border-bottom: 1px solid var(--color-border-light);
 }
 
-.dashboard-table th {
+.quotations-table th {
   padding: 12px 16px;
   font-family: var(--font-family);
   font-style: normal;
@@ -152,17 +167,17 @@
   background: var(--color-background);
 }
 
-.dashboard-table tbody tr {
+.quotations-table tbody tr {
   border-top: 1px solid var(--color-border-light);
   transition: background-color 0.2s ease;
 }
 
-.dashboard-table tbody tr:hover {
+.quotations-table tbody tr:hover {
   background: var(--color-background-gray);
 }
 
-.dashboard-table td {
-  padding: 8px 16px;
+.quotations-table td {
+  padding: 12px 16px;
   font-family: var(--font-family);
   font-style: normal;
   font-weight: 400;
@@ -174,32 +189,81 @@
 
 /* Column Widths */
 .col-quotation-name {
-  width: 241px;
-}
-
-.col-created-at {
-  width: 235px;
+  width: 240px;
 }
 
 .col-customer {
-  width: 241px;
+  width: 180px;
 }
 
-.col-file-name {
-  width: 190px;
+.col-items {
+  width: 80px;
 }
 
-.col-product-type {
-  width: 193px;
+.col-value {
+  width: 120px;
 }
 
 .col-status {
-  width: 161px;
+  width: 160px;
+}
+
+.col-created {
+  width: 120px;
 }
 
 .col-actions {
-  width: 157px;
+  width: 140px;
+}
+
+/* Quotation Name Cell */
+.quotation-name-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.quotation-number {
+  font-size: 12px;
   color: var(--color-text-secondary);
+  font-weight: 500;
+}
+
+.quotation-name {
+  font-size: 14px;
+  color: var(--color-text-primary);
+  font-weight: 400;
+}
+
+/* Status Badge */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.status-badge.status-searching-items {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.status-badge.status-inventory-check {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.status-badge.status-sent-for-confirmation {
+  background: #ede9fe;
+  color: #5b21b6;
+}
+
+.status-badge.status-done {
+  background: #d1fae5;
+  color: #065f46;
 }
 
 /* Action Links */
@@ -238,33 +302,39 @@
   color: var(--color-text-secondary);
 }
 
-/* See All Section */
-.see-all-section {
-  padding: 4px 16px 12px;
-}
-
-.see-all-link {
-  font-family: var(--font-family);
-  font-style: normal;
-  font-weight: 400;
-  font-size: 14px;
-  line-height: 21px;
+/* Text Utilities */
+.text-secondary {
   color: var(--color-text-secondary);
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 0;
-  transition: color 0.2s ease;
 }
 
-.see-all-link:hover {
-  color: var(--color-primary);
-  text-decoration: underline;
+/* Empty State */
+.empty-cell {
+  padding: 0 !important;
+  border: none !important;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 2rem;
+  color: var(--color-text-secondary);
+}
+
+.empty-state svg {
+  margin-bottom: 1rem;
+  opacity: 0.5;
+}
+
+.empty-state p {
+  font-size: 1rem;
+  margin: 0;
 }
 
 /* Responsive */
 @media (max-width: 1024px) {
-  .dashboard {
+  .quotations-page {
     padding: 16px 20px;
   }
   
@@ -272,76 +342,31 @@
     overflow-x: auto;
   }
   
-  .dashboard-table {
-    min-width: 800px;
+  .quotations-table {
+    min-width: 900px;
   }
 }
 
 @media (max-width: 768px) {
-  .dashboard {
+  .quotations-page {
     padding: 12px 16px;
   }
   
-  .dashboard-title {
+  .page-title {
     font-size: 24px;
     line-height: 30px;
   }
   
-  .section-title {
-    font-size: 20px;
-    line-height: 26px;
-  }
-  
-  .quick-actions-buttons {
+  .header-content {
     flex-direction: column;
+    align-items: stretch;
   }
-  
-  .quick-actions-buttons button {
+
+  .header-content button {
     width: 100%;
-    max-width: 100%;
+  }
+
+  .tabs-container {
+    gap: 16px;
   }
 }
-
-/* Enhanced quotation section */
-.section-subtitle {
-  font-family: var(--font-family);
-  font-size: 14px;
-  color: var(--color-text-secondary);
-  margin: 8px 0 0 0;
-}
-
-.tab-icon {
-  margin-right: 6px;
-  font-size: 16px;
-}
-
-.quotation-name-cell {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.incomplete-badge-small {
-  display: inline-block;
-  background: #FEF3C7;
-  color: #92400E;
-  padding: 2px 8px;
-  border-radius: 12px;
-  font-size: 11px;
-  font-weight: 600;
-  width: fit-content;
-}
-
-.has-incomplete {
-  background: #FFFBEB;
-}
-
-.action-link.primary-action {
-  color: var(--color-primary);
-  font-weight: 700;
-}
-
-.action-link.primary-action:hover {
-  color: var(--color-primary-hover);
-}
-
