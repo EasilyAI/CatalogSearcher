@@ -1,33 +1,37 @@
-import React, { useState } from 'react';
-import CatalogReview from './CatalogReview';
-import MultiItemUpload from './components/MultiItemUpload';
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import MainLayout from './layouts/MainLayout';
+import Login from './pages/Login';
+import Dashboard from './pages/Dashboard';
+import Files from './pages/Files';
+import SingleSearch from './pages/SingleSearch';
+import MultiItemSearch from './pages/MultiItemSearch';
+import Quotations from './pages/Quotations';
+import Settings from './pages/Settings';
+import './styles/globals.css';
 
 function App() {
-  const [currentView, setCurrentView] = useState('catalog'); // 'catalog' or 'multi-upload'
-
-  const handleNavigation = (view) => {
-    setCurrentView(view);
-  };
-
-  const renderCurrentView = () => {
-    switch (currentView) {
-      case 'multi-upload':
-        return <MultiItemUpload onNavigate={handleNavigation} />;
-      case 'catalog':
-      default:
-        return <CatalogReview onNavigate={handleNavigation} />;
-    }
-  };
-
   return (
-    <div className="App">
-      {/* Simple navigation toggle for testing */}
-      <div style={{ position: 'fixed', top: '10px', right: '10px', zIndex: 1000, background: 'white', padding: '10px', border: '1px solid #ccc', borderRadius: '5px' }}>
-        <button onClick={() => setCurrentView('catalog')} style={{ marginRight: '10px' }}>Catalog View</button>
-        <button onClick={() => setCurrentView('multi-upload')}>Multi Upload View</button>
-      </div>
-      {renderCurrentView()}
-    </div>
+    <Router>
+      <Routes>
+        {/* Login Route (no layout) */}
+        <Route path="/login" element={<Login />} />
+        
+        {/* Main App Routes (with sidebar layout) */}
+        <Route path="/" element={<MainLayout />}>
+          <Route index element={<Navigate to="/dashboard" replace />} />
+          <Route path="dashboard" element={<Dashboard />} />
+          <Route path="files" element={<Files />} />
+          <Route path="search" element={<SingleSearch />} />
+          <Route path="multi-search" element={<MultiItemSearch />} />
+          <Route path="quotations" element={<Quotations />} />
+          <Route path="settings" element={<Settings />} />
+        </Route>
+        
+        {/* Catch all - redirect to dashboard */}
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      </Routes>
+    </Router>
   );
 }
 

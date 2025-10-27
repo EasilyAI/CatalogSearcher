@@ -1,0 +1,23 @@
+.main-layout {
+  display: flex;
+  flex-direction: row;
+  min-height: 100vh;
+  background: var(--color-background);
+}
+
+.main-layout-content {
+  flex: 1;
+  margin-left: 320px;
+  width: calc(100% - 320px);
+  min-height: 100vh;
+  background: var(--color-background);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .main-layout-content {
+    margin-left: 280px;
+    width: calc(100% - 280px);
+  }
+}
+
