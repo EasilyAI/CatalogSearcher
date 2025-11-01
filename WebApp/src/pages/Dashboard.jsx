@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getDraftQuotations, getRecentQuotations } from '../data/mockQuotations';
+import { getInProgressUploads } from '../data/mockUploads';
 import './Dashboard.css';
 
 const Dashboard = () => {
@@ -12,22 +13,8 @@ const Dashboard = () => {
   
   const displayedQuotations = activeTab === 'open-drafts' ? draftQuotations : recentQuotations;
 
-  const uploads = [
-    {
-      id: 1,
-      fileName: 'OringSwaglok',
-      productType: 'o-ring',
-      createdAt: '2024-01-22',
-      status: 'In Progress'
-    },
-    {
-      id: 2,
-      fileName: 'CylindersV2',
-      productType: 'cylinder',
-      createdAt: '2024-01-21',
-      status: 'In Progress'
-    }
-  ];
+  // Get in-progress uploads from centralized data
+  const uploads = getInProgressUploads();
 
   const handleNewQuotation = () => {
     navigate('/quotations/edit/new');

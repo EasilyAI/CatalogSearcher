@@ -1,56 +1,21 @@
 import React, { useState } from 'react';
+import { mockBatchItems } from '../data/mockBatchItems';
 import './MultiItemUpload.css';
 
 const MultiItemUpload = ({ onNavigate }) => {
   const [activeTab, setActiveTab] = useState('all');
   const [uploadedFile, setUploadedFile] = useState(null);
-  const [items, setItems] = useState([
-    {
-      id: 1,
-      itemNumber: 1,
-      productType: 'Sensor',
-      requestedItem: 'Part Number 12345',
-      quantity: 1,
-      status: 'Match Found',
-      isExpanded: false
-    },
-    {
-      id: 2,
-      itemNumber: 2,
-      productType: 'Sensor',
-      requestedItem: 'Description: Sensor X',
-      quantity: 5,
-      status: 'Match Found',
-      isExpanded: false
-    },
-    {
-      id: 3,
-      itemNumber: 3,
-      productType: 'Part',
-      requestedItem: 'Part Number 98765',
-      quantity: 2,
-      status: 'Match Found',
-      isExpanded: false
-    },
-    {
-      id: 4,
-      itemNumber: 4,
-      productType: 'Valve',
-      requestedItem: 'Description: Valve A',
-      quantity: 10,
-      status: 'Match Found',
-      isExpanded: false
-    },
-    {
-      id: 5,
-      itemNumber: 5,
-      productType: 'Part',
-      requestedItem: 'Part Number 45678',
-      quantity: 3,
-      status: 'Match Found',
-      isExpanded: false
-    }
-  ]);
+  
+  // Use centralized batch items data (simplified for this component)
+  const [items, setItems] = useState(mockBatchItems.slice(0, 5).map(item => ({
+    id: item.id,
+    itemNumber: item.itemNumber,
+    productType: item.productType,
+    requestedItem: item.requestedItem,
+    quantity: item.quantity,
+    status: item.status,
+    isExpanded: false
+  })));
 
   const handleFileUpload = (event) => {
     const file = event.target.files[0];

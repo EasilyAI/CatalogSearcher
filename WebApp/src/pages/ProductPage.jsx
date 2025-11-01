@@ -1,37 +1,27 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { getProductByOrderingNo } from '../data/mockProducts';
 import './ProductPage.css';
 
 const ProductPage = () => {
   const { orderingNo } = useParams();
   const navigate = useNavigate();
 
-  // Mock product data
-  const productDetails = {
+  // Get product data from centralized mock data
+  const product = getProductByOrderingNo(orderingNo);
+  
+  // If product not found, show default data
+  const productDetails = product || {
     orderingNo: orderingNo,
-    productName: 'Pneumatic Cylinder HB 100',
-    type: 'Cylinder',
-    manufacturer: 'Hirschberg Industries',
-    description: 'High-performance pneumatic cylinder designed for demanding applications. Features precision engineering and durable construction for long-lasting performance. Suitable for automation, manufacturing, and industrial control systems.',
-    specifications: {
-      material: 'SS316 Stainless Steel',
-      pressure: '10 bar (145 psi)',
-      temperature: '-20°C to 80°C',
-      connectionType: 'G 1/4"',
-      bore: '100 mm',
-      stroke: '200 mm',
-      pistonRodDiameter: '25 mm',
-      weight: '2.8 kg'
-    },
-    price: '$445.00',
-    catalogPage: 'Page 47',
-    image: '/images/HB 100 - digital.JPG',
-    sources: [
-      { type: 'Price List', year: 2025, link: '#', hasPrice: true },
-      { type: 'Price List', year: 2024, link: '#', hasPrice: false },
-      { type: 'Technical Catalog', year: 2024, link: '#', hasPrice: false, pages: 'Pages 45-52' },
-      { type: 'Specification Sheet', year: 2025, link: '#', hasPrice: false }
-    ]
+    productName: 'Product Not Found',
+    type: 'Unknown',
+    manufacturer: 'Unknown',
+    description: 'Product details not available.',
+    specifications: {},
+    price: 0,
+    catalogPage: 'N/A',
+    image: null,
+    sources: []
   };
 
   // State for editable specifications
@@ -90,8 +80,8 @@ const ProductPage = () => {
           </div>
           <div className="product-price-section">
             <p className="product-price-label">Manufacturer's Price</p>
-            <p className="product-price">{productDetails.price}</p>
-            <p className="product-price-source">From {productDetails.sources.find(s => s.hasPrice)?.year} Price List</p>
+            <p className="product-price">${productDetails.price.toFixed(2)}</p>
+            <p className="product-price-source">From {productDetails.sources.find(s => s.hasPrice)?.year || 'N/A'} Price List</p>
           </div>
         </div>
 

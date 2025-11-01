@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { mockQuotationItems } from '../data/mockQuotationItems';
 import './EditQuotation.css';
 
 const EditQuotation = () => {
@@ -14,121 +15,8 @@ const EditQuotation = () => {
   const sourceInfo = location.state?.source;
   const batchSearchAvailable = location.state?.batchSearchAvailable || false;
 
-  // Default mock items for demonstration
-  const defaultMockItems = [
-      {
-        orderNo: 1,
-        orderingNumber: 'CYL-100-25',
-        requestedItem: 'Hydraulic cylinder 100mm bore, 25mm stroke',
-        productName: 'Hydraulic Cylinder HC-100-25',
-        productType: 'Cylinder',
-        quantity: 100,
-        price: 60.00,
-        margin: 20,
-        sketchFile: 'https://example.com/sketches/cyl-100-25.pdf',
-        catalogLink: 'https://example.com/catalog/cyl-100-25',
-        notes: 'Standard hydraulic cylinder',
-        isIncomplete: false
-      },
-      {
-        orderNo: 2,
-        orderingNumber: 'VLV-3W-12',
-        requestedItem: '3-way valve 1/2 inch',
-        productName: '3-Way Ball Valve 1/2"',
-        productType: 'Valve',
-        quantity: 50,
-        price: 125.00,
-        margin: 25,
-        sketchFile: 'https://example.com/sketches/vlv-3w-12.pdf',
-        catalogLink: 'https://example.com/catalog/vlv-3w-12',
-        notes: 'Brass construction',
-        isIncomplete: false
-      },
-      {
-        orderNo: 3,
-        orderingNumber: 'TUB-SS-20',
-        requestedItem: 'Stainless steel tubing 20mm',
-        productName: 'SS304 Tubing 20mm OD',
-        productType: 'Tube',
-        quantity: 25,
-        price: 230.00,
-        margin: 15,
-        sketchFile: null,
-        catalogLink: 'https://example.com/catalog/tub-ss-20',
-        notes: 'Per meter',
-        isIncomplete: false
-      },
-      {
-        orderNo: 4,
-        orderingNumber: 'FTG-ELB-90',
-        requestedItem: '90 degree elbow fitting',
-        productName: '90° Elbow Fitting 3/4"',
-        productType: 'Fitting',
-        quantity: 75,
-        price: 90.00,
-        margin: 20,
-        sketchFile: 'https://example.com/sketches/ftg-elb-90.pdf',
-        catalogLink: 'https://example.com/catalog/ftg-elb-90',
-        notes: 'Brass, threaded',
-        isIncomplete: false
-      },
-      {
-        orderNo: 5,
-        orderingNumber: 'SEAL-OR-100',
-        requestedItem: 'O-ring 100mm ID',
-        productName: 'O-Ring NBR 100x5mm',
-        productType: 'Seal',
-        quantity: 200,
-        price: 15.00,
-        margin: 30,
-        sketchFile: null,
-        catalogLink: 'https://example.com/catalog/seal-or-100',
-        notes: 'NBR material, black',
-        isIncomplete: false
-      },
-      {
-        orderNo: 6,
-        orderingNumber: 'GKT-FLNG-150',
-        requestedItem: 'Flange gasket 150mm',
-        productName: 'Spiral Wound Gasket 150mm',
-        productType: 'Gasket',
-        quantity: 30,
-        price: 180.00,
-        margin: 18,
-        sketchFile: 'https://example.com/sketches/gkt-flng-150.pdf',
-        catalogLink: 'https://example.com/catalog/gkt-flng-150',
-        notes: 'PN16 rating',
-        isIncomplete: false
-      },
-      {
-        orderNo: 7,
-        orderingNumber: '',
-        requestedItem: 'Custom pressure sensor 0-100 bar',
-        productName: '',
-        productType: 'Sensor',
-        quantity: 10,
-        price: 0,
-        margin: 20,
-        sketchFile: null,
-        catalogLink: '',
-        notes: 'Need to find matching product',
-        isIncomplete: true
-      },
-      {
-        orderNo: 8,
-        orderingNumber: 'PLG-HEX-M16',
-        requestedItem: 'Hex plug M16x1.5',
-        productName: 'Hex Plug M16x1.5',
-        productType: 'Fitting',
-        quantity: 100,
-        price: 8.50,
-        margin: 25,
-        sketchFile: null,
-        catalogLink: 'https://example.com/catalog/plg-hex-m16',
-        notes: 'Steel, zinc plated',
-        isIncomplete: false
-      }
-    ];
+  // Use centralized mock items for demonstration
+  const defaultMockItems = mockQuotationItems.map(item => ({ ...item }));
 
   // Determine initial items based on source
   const determineInitialItems = () => {
@@ -593,7 +481,9 @@ Your Sales Team`;
                       <option>Fitting</option>
                       <option>Seal</option>
                       <option>Gasket</option>
-                      <option>Sensor</option>
+                      <option>Regulator</option>
+                      <option>Coupling</option>
+                      <option>Hose</option>
                       <option>Other</option>
                     </select>
                   </td>

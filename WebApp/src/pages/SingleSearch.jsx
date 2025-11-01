@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AddToQuotationDialog from '../components/AddToQuotationDialog';
+import { mockSearchResults, getSearchResultsByType, getTopSearchResults } from '../data/mockSearchResults';
 import './SingleSearch.css';
 
 const SingleSearch = () => {
@@ -15,91 +16,10 @@ const SingleSearch = () => {
   const [showProductDropdown, setShowProductDropdown] = useState(false);
   const [showCountDropdown, setShowCountDropdown] = useState(false);
 
-  const productTypes = ['All Types', 'Valve', 'Tube', 'Cylinder', 'Fitting', 'Regulator'];
+  const productTypes = ['All Types', 'Valve', 'Tube', 'Cylinder', 'Fitting', 'Regulator', 'Seal', 'Gasket', 'Coupling', 'Hose'];
 
-  const allSearchResults = [
-    {
-      id: 1,
-      productName: 'Advanced Industrial Motor',
-      orderingNo: 'SS-109-12345',
-      confidence: 92,
-      type: 'Valve',
-      specifications: 'Material: SS360 Pressure: 230 psi'
-    },
-    {
-      id: 2,
-      productName: 'high pressure NPT valve',
-      orderingNo: 'SS-10-2345',
-      confidence: 88,
-      type: 'Valve',
-      specifications: 'Material: SS360 Pressure: 230 psi'
-    },
-    {
-      id: 3,
-      productName: 'half tube valve',
-      orderingNo: 'HT-360-S98FT',
-      confidence: 85,
-      type: 'Valve',
-      specifications: 'Material: SS360 Pressure: 230 psi'
-    },
-    {
-      id: 4,
-      productName: 'king of valves',
-      orderingNo: 'KOV-SS-106',
-      confidence: 82,
-      type: 'Valve',
-      specifications: 'Material: SS360 Pressure: 230 psi'
-    },
-    {
-      id: 5,
-      productName: 'valvushuvi',
-      orderingNo: 'A12345',
-      confidence: 78,
-      type: 'Valve',
-      specifications: 'Material: SS360 Pressure: 230 psi'
-    },
-    {
-      id: 6,
-      productName: 'Standard Cylinder Assembly',
-      orderingNo: 'CYL-450-X',
-      confidence: 75,
-      type: 'Cylinder',
-      specifications: 'Bore: 50mm Stroke: 100mm'
-    },
-    {
-      id: 7,
-      productName: 'Heavy Duty Tube',
-      orderingNo: 'TB-HD-9900',
-      confidence: 72,
-      type: 'Tube',
-      specifications: 'Diameter: 25mm Length: 500mm'
-    },
-    {
-      id: 8,
-      productName: 'Precision Fitting Pro',
-      orderingNo: 'FIT-200-SS',
-      confidence: 70,
-      type: 'Fitting',
-      specifications: 'Thread: 1/4 NPT Material: SS316'
-    },
-    {
-      id: 9,
-      productName: 'Compact Regulator',
-      orderingNo: 'REG-C-777',
-      confidence: 68,
-      type: 'Regulator',
-      specifications: 'Max Pressure: 150 psi'
-    },
-    {
-      id: 10,
-      productName: 'Ultra Valve Premium',
-      orderingNo: 'UV-PREM-88',
-      confidence: 65,
-      type: 'Valve',
-      specifications: 'Material: Brass Pressure: 200 psi'
-    }
-  ];
-
+  // Get search results from centralized data
+  const allSearchResults = getSearchResultsByType(productType);
   const searchResults = allSearchResults.slice(0, resultsCount);
 
   const handleSearch = () => {
