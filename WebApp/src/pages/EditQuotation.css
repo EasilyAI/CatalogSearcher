@@ -77,6 +77,11 @@
   color: #dce2e5;
 }
 
+.quotation-number {
+  color: #647a87;
+  font-size: 0.75rem;
+}
+
 .quotation-customer {
   color: #111517;
   font-weight: 500;
@@ -129,6 +134,26 @@
 
 .btn-save:hover {
   background: #1a6ea0;
+}
+
+.btn-edit-metadata {
+  background: #f0f3f4;
+  color: #111517;
+  border: 1px solid #dce2e5;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.btn-edit-metadata:hover {
+  background: #e1e4e6;
+  border-color: #c4ccd1;
 }
 
 /* Controls Bar - Mild and compact */

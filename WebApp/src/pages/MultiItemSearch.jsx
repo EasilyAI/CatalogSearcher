@@ -137,11 +137,10 @@ const MultiItemSearch = () => {
       timestamp: new Date().toISOString()
     }));
 
-    // Navigate to new quotation with these items
-    navigate('/quotations/edit/new', { 
+    // Navigate to metadata form first, then to items page
+    navigate('/quotations/new', { 
       state: { 
         items: quotationItems,
-        customer: 'New Customer',
         source: 'batch-search',
         batchSearchAvailable: true
       } 

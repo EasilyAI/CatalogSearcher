@@ -33,11 +33,15 @@ const Quotations = () => {
   };
 
   const handleCreateNew = () => {
-    navigate('/quotations/edit/new');
+    navigate('/quotations/new');
   };
 
   const handleEditQuotation = (id) => {
     navigate(`/quotations/edit/${id}`);
+  };
+
+  const handleEditMetadata = (id) => {
+    navigate(`/quotations/metadata/${id}`);
   };
 
   const handleDeleteQuotation = (id) => {
@@ -163,7 +167,13 @@ const Quotations = () => {
                             className="action-link"
                             onClick={() => handleEditQuotation(quotation.id)}
                           >
-                            Edit
+                            Edit Items
+                          </button>
+                          <button 
+                            className="action-link"
+                            onClick={() => handleEditMetadata(quotation.id)}
+                          >
+                            Edit Info
                           </button>
                           <button 
                             className="action-link danger"

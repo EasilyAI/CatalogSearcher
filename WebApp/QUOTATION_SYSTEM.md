@@ -2,10 +2,11 @@
 
 ## Overview
 
-The quotation system allows users to create, manage, and track quotations through a multi-stage workflow. The system includes two main pages:
+The quotation system allows users to create, manage, and track quotations through a multi-stage workflow. The system includes three main pages:
 
 1. **Quotations List** (`/quotations`) - View and filter all quotations by status
-2. **Edit Quotation** (`/quotations/edit/:id`) - Create or edit quotations
+2. **New/Edit Quotation Metadata** (`/quotations/new` or `/quotations/metadata/:id`) - Create or edit quotation information
+3. **Edit Quotation Items** (`/quotations/edit/:id`) - Manage quotation products and pricing
 
 ## Features
 
@@ -17,15 +18,37 @@ The quotation system allows users to create, manage, and track quotations throug
 - **Visual Status Indicators**: Color-coded status badges for easy identification
 - **Statistics**: View item count, total value, and incomplete items at a glance
 
-### Edit Quotation Page
+### New/Edit Quotation Metadata Page
+
+This preliminary form collects essential quotation information before proceeding to item management:
+
+#### Form Fields
+- **Quotation Name** (Required): Descriptive name to identify the quotation
+- **Customer Name** (Required): Name of the customer or company
+- **Date Created**: Automatically set, can be modified
+- **Initial Status**: Set the starting status (defaults to "Searching Items")
+- **Currency**: Select currency for pricing (USD, EUR, GBP, ILS, JPY, CNY)
+- **Default Margin (%)**: Default profit margin applied to all items (0-100%)
+- **Notes**: Additional information about the quotation
+
+#### Actions
+- **Cancel**: Return to previous page (quotations list or edit items page)
+- **Continue to Items** (New): Proceed to items management page
+- **Save & Return** (Edit): Save changes and return to items management page
+
+### Edit Quotation Items Page
 
 #### Header Section
-- Quotation number and customer information
+- Quotation name and number
+- Customer information and item statistics
+- Currency display with total value
+- **Edit Info Button**: Opens metadata page to edit quotation information
 - Status selector with 4 states:
   - **Searching Items**: Initial state when creating a quotation
   - **Inventory Check**: Items found, checking stock availability
   - **Sent for Confirmation**: Quotation sent to customer for approval
   - **Done**: Quotation finalized and completed
+- Save button to persist changes
 - Back button to return to quotations list
 
 #### Statistics Dashboard
@@ -94,32 +117,50 @@ Three export formats available:
 
 1. Navigate to `/quotations`
 2. Click "New Quotation" button
-3. Add items manually or from search results
-4. Set pricing and margins
-5. Export as needed
-6. Change status as quotation progresses
+3. Fill in quotation metadata form:
+   - Enter quotation name and customer
+   - Select currency and default margin
+   - Add any relevant notes
+4. Click "Continue to Items"
+5. Add items manually or from search results
+6. Set pricing and margins
+7. Export as needed
+8. Change status as quotation progresses
 
 ### From Single Search
 
 1. Perform search in `/search`
 2. Click "Add to Quotation"
 3. Select existing quotation or create new
-4. Item automatically added with product details
+4. If creating new:
+   - Fill in quotation metadata form
+   - Click "Continue to Items"
+5. Item automatically added with product details
 
 ### From Multi-Item Search
 
 1. Upload Excel file with multiple items
 2. Review search results
 3. Click "Create Quotation" with selected items
-4. All items added to new quotation
+4. Fill in quotation metadata form
+5. Click "Continue to Items"
+6. All items added to new quotation
 
 ### Editing Existing Quotation
 
+#### Editing Items
 1. Navigate to `/quotations`
-2. Click "Edit" on desired quotation
+2. Click "Edit Items" on desired quotation
 3. Modify items, prices, margins as needed
 4. Update status
 5. Export when ready
+
+#### Editing Quotation Information
+1. Navigate to `/quotations`
+2. Click "Edit Info" on desired quotation
+3. OR from the items page, click "Edit Info" in the header
+4. Modify quotation name, customer, currency, margin, notes
+5. Click "Save & Return" to go back to items page
 
 ## Integration Points (To Be Implemented)
 
@@ -209,15 +250,19 @@ CREATE TABLE quotation_items (
 WebApp/src/pages/
 ├── Quotations.jsx          # List view of all quotations
 ├── Quotations.css          # Styles for list view
-├── EditQuotation.jsx       # Create/Edit quotation page
-└── EditQuotation.css       # Styles for edit page
+├── NewQuotation.jsx        # Quotation metadata form (create/edit)
+├── NewQuotation.css        # Styles for metadata form
+├── EditQuotation.jsx       # Edit quotation items page
+└── EditQuotation.css       # Styles for items edit page
 ```
 
 ## Navigation Routes
 
 - `/quotations` - Quotations list page
-- `/quotations/edit/new` - Create new quotation
-- `/quotations/edit/:id` - Edit existing quotation
+- `/quotations/new` - Create new quotation (metadata form)
+- `/quotations/metadata/:id` - Edit quotation metadata
+- `/quotations/edit/new` - Edit new quotation items (after metadata form)
+- `/quotations/edit/:id` - Edit existing quotation items
 - `/search` - Single product search (can add to quotation)
 - `/multi-search` - Multi-item search (can create quotation)
 

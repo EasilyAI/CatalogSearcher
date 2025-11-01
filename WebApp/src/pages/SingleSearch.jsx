@@ -89,11 +89,10 @@ const SingleSearch = () => {
       isIncomplete: false
     };
 
-    // Navigate to new quotation with this item
-    navigate('/quotations/edit/new', { 
+    // Navigate to metadata form first, then to items page
+    navigate('/quotations/new', { 
       state: { 
         items: [quotationItem],
-        customer: 'New Customer',
         source: 'single-search'
       } 
     });

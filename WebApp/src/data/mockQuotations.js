@@ -10,7 +10,10 @@ export const mockQuotations = [
     totalValue: 1025.00,
     incompleteItems: 2,
     createdDate: '2024-01-20',
-    lastModified: '2024-10-27'
+    lastModified: '2024-10-27',
+    currency: 'USD',
+    defaultMargin: 20,
+    notes: 'Standard valve order for Leon Levi. Client requested urgent delivery.'
   },
   {
     id: '12344',
@@ -22,7 +25,10 @@ export const mockQuotations = [
     totalValue: 3250.00,
     incompleteItems: 0,
     createdDate: '2024-01-20',
-    lastModified: '2024-10-26'
+    lastModified: '2024-10-26',
+    currency: 'USD',
+    defaultMargin: 18,
+    notes: 'Large order for Intel. Special pricing agreed with purchasing department.'
   },
   {
     id: '12343',
@@ -34,7 +40,10 @@ export const mockQuotations = [
     totalValue: 5780.00,
     incompleteItems: 0,
     createdDate: '2024-01-18',
-    lastModified: '2024-10-25'
+    lastModified: '2024-10-25',
+    currency: 'EUR',
+    defaultMargin: 25,
+    notes: 'European customer, all prices in EUR.'
   },
   {
     id: '12342',
@@ -46,7 +55,10 @@ export const mockQuotations = [
     totalValue: 2100.00,
     incompleteItems: 0,
     createdDate: '2024-01-10',
-    lastModified: '2024-01-20'
+    lastModified: '2024-01-20',
+    currency: 'USD',
+    defaultMargin: 22,
+    notes: 'Completed and shipped.'
   },
   {
     id: '12341',
@@ -58,7 +70,10 @@ export const mockQuotations = [
     totalValue: 8900.00,
     incompleteItems: 0,
     createdDate: '2024-01-05',
-    lastModified: '2024-01-15'
+    lastModified: '2024-01-15',
+    currency: 'USD',
+    defaultMargin: 20,
+    notes: 'Q4 quarterly order. Client very satisfied with delivery time.'
   }
 ];
 
