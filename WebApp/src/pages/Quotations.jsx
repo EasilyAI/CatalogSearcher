@@ -186,4 +186,3 @@ const Quotations = () => {
 };
 
 export default Quotations;
-

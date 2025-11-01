@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import './ProductPage.css';
 
@@ -9,23 +9,63 @@ const ProductPage = () => {
   // Mock product data
   const productDetails = {
     orderingNo: orderingNo,
-    productName: 'Advanced Industrial Motor',
-    type: 'Valve',
-    manufacturer: 'SwagelokPro Industries',
-    description: 'High-performance industrial valve designed for demanding applications. Features precision engineering and durable construction for long-lasting performance.',
+    productName: 'Pneumatic Cylinder HB 100',
+    type: 'Cylinder',
+    manufacturer: 'Hirschberg Industries',
+    description: 'High-performance pneumatic cylinder designed for demanding applications. Features precision engineering and durable construction for long-lasting performance. Suitable for automation, manufacturing, and industrial control systems.',
     specifications: {
-      material: 'SS360 Stainless Steel',
-      pressure: '230 psi',
-      temperature: '-20°C to 150°C',
-      connectionType: 'NPT Thread',
-      portSize: '1/4 inch',
-      weight: '0.5 kg'
+      material: 'SS316 Stainless Steel',
+      pressure: '10 bar (145 psi)',
+      temperature: '-20°C to 80°C',
+      connectionType: 'G 1/4"',
+      bore: '100 mm',
+      stroke: '200 mm',
+      pistonRodDiameter: '25 mm',
+      weight: '2.8 kg'
     },
-    price: '$125.99',
-    availability: 'In Stock',
-    leadTime: '2-3 business days',
-    catalogPage: 'Catalog Page 47',
-    image: '/images/HB 100 - digital.JPG'
+    price: '$445.00',
+    catalogPage: 'Page 47',
+    image: '/images/HB 100 - digital.JPG',
+    sources: [
+      { type: 'Price List', year: 2025, link: '#', hasPrice: true },
+      { type: 'Price List', year: 2024, link: '#', hasPrice: false },
+      { type: 'Technical Catalog', year: 2024, link: '#', hasPrice: false, pages: 'Pages 45-52' },
+      { type: 'Specification Sheet', year: 2025, link: '#', hasPrice: false }
+    ]
+  };
+
+  // State for editable specifications
+  const [specifications, setSpecifications] = useState(productDetails.specifications);
+  const [isEditingSpecs, setIsEditingSpecs] = useState(false);
+  const [newSpecKey, setNewSpecKey] = useState('');
+  const [newSpecValue, setNewSpecValue] = useState('');
+
+  const handleSpecChange = (key, value) => {
+    setSpecifications(prev => ({
+      ...prev,
+      [key]: value
+    }));
+  };
+
+  const handleRemoveSpec = (key) => {
+    const newSpecs = { ...specifications };
+    delete newSpecs[key];
+    setSpecifications(newSpecs);
+  };
+
+  const handleAddSpec = () => {
+    if (newSpecKey && newSpecValue) {
+      setSpecifications(prev => ({
+        ...prev,
+        [newSpecKey]: newSpecValue
+      }));
+      setNewSpecKey('');
+      setNewSpecValue('');
+    }
+  };
+
+  const formatLabel = (key) => {
+    return key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
   };
 
   return (
@@ -46,19 +86,18 @@ const ProductPage = () => {
             <p className="product-ordering-no">Ordering No: <span>{productDetails.orderingNo}</span></p>
             <div className="product-badges">
               <span className="product-badge type-badge">{productDetails.type}</span>
-              <span className="product-badge availability-badge">{productDetails.availability}</span>
             </div>
           </div>
           <div className="product-price-section">
-            <p className="product-price-label">Price</p>
+            <p className="product-price-label">Manufacturer's Price</p>
             <p className="product-price">{productDetails.price}</p>
-            <p className="product-lead-time">Lead Time: {productDetails.leadTime}</p>
+            <p className="product-price-source">From {productDetails.sources.find(s => s.hasPrice)?.year} Price List</p>
           </div>
         </div>
 
         {/* Product Details */}
         <div className="product-details-grid">
-          {/* Product Image */}
+          {/* Product Image and Description */}
           <div className="product-image-section">
             <div className="product-image-wrapper">
               <img 
@@ -70,12 +109,17 @@ const ProductPage = () => {
                 }}
               />
             </div>
+            
+            <div className="info-card">
+              <h3 className="info-card-title">Description</h3>
+              <p className="product-description">{productDetails.description}</p>
+            </div>
           </div>
 
           {/* Product Info */}
           <div className="product-info-section">
             <div className="info-card">
-              <h3 className="info-card-title">Product Information</h3>
+              <h3 className="info-card-title">Product Information & Sources</h3>
               <div className="info-grid">
                 <div className="info-item">
                   <span className="info-label">Manufacturer:</span>
@@ -85,28 +129,87 @@ const ProductPage = () => {
                   <span className="info-label">Type:</span>
                   <span className="info-value">{productDetails.type}</span>
                 </div>
-                <div className="info-item">
-                  <span className="info-label">Catalog Reference:</span>
-                  <span className="info-value">{productDetails.catalogPage}</span>
+              </div>
+              
+              <div className="sources-section">
+                <h4 className="sources-title">Sources of Information</h4>
+                <div className="sources-list">
+                  {productDetails.sources.map((source, index) => (
+                    <a key={index} href={source.link} className="source-item">
+                      <div className="source-info">
+                        <span className="source-type">{source.type} ({source.year})</span>
+                        {source.pages && <span className="source-pages">{source.pages}</span>}
+                        {source.hasPrice && <span className="source-badge">Current Price</span>}
+                      </div>
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M6 12L10 8L6 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    </a>
+                  ))}
                 </div>
               </div>
             </div>
 
             <div className="info-card">
-              <h3 className="info-card-title">Description</h3>
-              <p className="product-description">{productDetails.description}</p>
-            </div>
-
-            <div className="info-card">
-              <h3 className="info-card-title">Technical Specifications</h3>
-              <div className="specs-grid">
-                {Object.entries(productDetails.specifications).map(([key, value]) => (
-                  <div key={key} className="spec-item">
-                    <span className="spec-label">{key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}:</span>
-                    <span className="spec-value">{value}</span>
+              <div className="specs-header">
+                <h3 className="info-card-title">Technical Specifications</h3>
+                <button 
+                  className="edit-specs-button"
+                  onClick={() => setIsEditingSpecs(!isEditingSpecs)}
+                >
+                  {isEditingSpecs ? 'Done Editing' : 'Edit Specifications'}
+                </button>
+              </div>
+              <div className="specs-grid-dense">
+                {Object.entries(specifications).map(([key, value]) => (
+                  <div key={key} className="spec-item-dense">
+                    <span className="spec-label-dense">{formatLabel(key)}:</span>
+                    {isEditingSpecs ? (
+                      <div className="spec-edit-controls">
+                        <input 
+                          type="text"
+                          className="spec-input"
+                          value={value}
+                          onChange={(e) => handleSpecChange(key, e.target.value)}
+                        />
+                        <button 
+                          className="remove-spec-button"
+                          onClick={() => handleRemoveSpec(key)}
+                          title="Remove specification"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ) : (
+                      <span className="spec-value-dense">{value}</span>
+                    )}
                   </div>
                 ))}
               </div>
+              {isEditingSpecs && (
+                <div className="add-spec-section">
+                  <input
+                    type="text"
+                    placeholder="Field name"
+                    className="spec-input"
+                    value={newSpecKey}
+                    onChange={(e) => setNewSpecKey(e.target.value)}
+                  />
+                  <input
+                    type="text"
+                    placeholder="Value"
+                    className="spec-input"
+                    value={newSpecValue}
+                    onChange={(e) => setNewSpecValue(e.target.value)}
+                  />
+                  <button 
+                    className="add-spec-button"
+                    onClick={handleAddSpec}
+                  >
+                    + Add Field
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
