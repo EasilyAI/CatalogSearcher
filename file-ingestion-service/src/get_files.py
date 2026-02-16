@@ -1189,16 +1189,48 @@ def delete_file(event, context):
                 print(f"[delete_file] WARNING: Failed to delete Textract results {textract_results_key}: {e}")
                 # Continue with deletion even if S3 delete fails
         
-        # Delete from catalog products table
+        # Delete from catalog / price list / sales drawing related tables
         file_business_type = file_info.get("businessFileType", "")
         if file_business_type == "Catalog":
+            # Catalog products are chunked by (fileId, chunkIndex) now.
+            # We need to delete all chunks for this fileId.
             catalog_products_table = dynamodb.Table(CATALOG_PRODUCTS_TABLE)
             try:
-                print(f"[delete_file] Deleting products for file {file_id}")
-                catalog_products_table.delete_item(Key={"fileId": file_id})
-                print(f"[delete_file] Successfully deleted products for file {file_id}")
+                print(f"[delete_file] Deleting catalog products for file {file_id}")
+                items_deleted = 0
+                last_evaluated_key = None
+
+                while True:
+                    query_kwargs = {
+                        "KeyConditionExpression": Key("fileId").eq(file_id),
+                    }
+                    if last_evaluated_key:
+                        query_kwargs["ExclusiveStartKey"] = last_evaluated_key
+
+                    response = catalog_products_table.query(**query_kwargs)
+                    items = response.get("Items", [])
+
+                    if not items:
+                        break
+
+                    with catalog_products_table.batch_writer() as batch:
+                        for item in items:
+                            # chunkIndex is the sort key – must match exactly
+                            chunk_index = item.get("chunkIndex")
+                            if chunk_index is None:
+                                continue
+                            batch.delete_item(
+                                Key={"fileId": file_id, "chunkIndex": chunk_index}
+                            )
+                            items_deleted += 1
+
+                    last_evaluated_key = response.get("LastEvaluatedKey")
+                    if not last_evaluated_key:
+                        break
+
+                print(f"[delete_file] Successfully deleted {items_deleted} catalog product chunks for file {file_id}")
             except Exception as e:
-                print(f"[delete_file] WARNING: Failed to delete products for file {file_id}: {e}")
+                print(f"[delete_file] WARNING: Failed to delete catalog products for file {file_id}: {e}")
                 # Continue with deletion even if products delete fails (might not exist)
         
         elif file_business_type == "Price List":
