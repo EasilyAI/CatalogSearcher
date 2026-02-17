@@ -58,10 +58,22 @@ provider:
     # Optional: OpenAI API Key for re-ranking
     OPENAI_API_KEY: ${env:OPENAI_API_KEY}
     
+    # Parallel processing configuration
+    PARALLEL_WORKER_CHUNKS: ${env:PARALLEL_WORKER_CHUNKS, '10'}
+    BATCH_CHUNK_SIZE: ${env:BATCH_CHUNK_SIZE, '20'}
+    MAX_SEARCH_WORKERS: ${env:MAX_SEARCH_WORKERS, '25'}
+    SEARCH_RESULT_SIZE: ${env:SEARCH_RESULT_SIZE, '10'}
+    
     # DynamoDB Configuration
     PRODUCT_TABLE: ${self:custom.productsTable}
     CATALOG_PRODUCTS_TABLE: ${self:custom.catalogProductsTable}
     PRICE_LIST_PRODUCTS_TABLE: ${self:custom.priceListProductsTable}
+    BATCH_SEARCH_JOBS_TABLE: ${self:custom.batchSearchJobsTable}
+    
+    # OpenAI Rate Limiting Configuration
+    OPENAI_MAX_RETRIES: ${env:OPENAI_MAX_RETRIES, '5'}
+    OPENAI_RETRY_BASE_DELAY: ${env:OPENAI_RETRY_BASE_DELAY, '1.0'}
+    OPENAI_BATCH_RERANK_SIZE: ${env:OPENAI_BATCH_RERANK_SIZE, '20'}
     
     # Logging
     LOG_LEVEL: INFO
@@ -97,6 +109,17 @@ provider:
           Resource:
             - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:custom.catalogProductsTable}
             - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:custom.priceListProductsTable}
+        # Batch search jobs table (full CRUD)
+        - Effect: Allow
+          Action:
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+            - dynamodb:Query
+          Resource:
+            - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:custom.batchSearchJobsTable}
+            - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:custom.batchSearchJobsTable}/index/*
         
         # AWS Bedrock permissions (for embeddings - NO Docker needed!)
         - Effect: Allow
@@ -105,6 +128,14 @@ provider:
           Resource:
             - arn:aws:bedrock:*:*:foundation-model/amazon.titan-embed-text-v1
             - arn:aws:bedrock:*:*:foundation-model/cohere.embed-english-v3
+        
+        # Lambda invoke (for async job processing and parallel workers)
+        - Effect: Allow
+          Action:
+            - lambda:InvokeFunction
+          Resource:
+            - arn:aws:lambda:${aws:region}:${aws:accountId}:function:${self:service}-${self:provider.stage}-searchApi
+            - arn:aws:lambda:${aws:region}:${aws:accountId}:function:${self:service}-${self:provider.stage}-batchWorker
         
         # CloudWatch Logs
         - Effect: Allow
@@ -131,6 +162,7 @@ custom:
   catalogProductsTable: hb-catalog-products
   productsTable: hb-products
   priceListProductsTable: hb-pricelist-products
+  batchSearchJobsTable: hb-batch-search-jobs
   # Production frontend URL (change this when deploying to production)
   productionFrontendUrl: ${env:PRODUCTION_FRONTEND_URL, 'https://main.d1xymtccqgi62h.amplifyapp.com'}
   serverless-offline:
@@ -193,13 +225,25 @@ functions:
           maximumRetryAttempts: 3
           enabled: true
 
+  # Dedicated batch worker - invoked in parallel for fast processing
+  batchWorker:
+    handler: api/batch_worker.handler
+    description: Parallel batch search worker - processes chunks of items
+    memorySize: 1024  # More memory for faster processing
+    timeout: 300  # 5 minutes per worker
+    layers:
+      - { Ref: PythonRequirementsLambdaLayer }
+    # No HTTP events - invoked directly by searchApi
+
   searchApi:
     handler: api/handler.handler
     description: Search API for vector search and autocomplete (using Bedrock embeddings)
-    memorySize: 512
-    timeout: 30
+    memorySize: 1024  # Increased for faster cold starts (more memory = more CPU)
+    timeout: 300  # 5 minutes for batch operations with many items
     layers:
       - { Ref: PythonRequirementsLambdaLayer }
+    environment:
+      BATCH_WORKER_FUNCTION: ${self:service}-${self:provider.stage}-batchWorker
     events:
       - httpApi:
           path: /search
@@ -216,6 +260,38 @@ functions:
       - httpApi:
           path: /batch-search
           method: post
+      # Batch search job management endpoints
+      - httpApi:
+          path: /batch-search/jobs
+          method: get
+      - httpApi:
+          path: /batch-search/status/{jobId}
+          method: get
+      - httpApi:
+          path: /batch-search/results/{jobId}
+          method: get
+      - httpApi:
+          path: /batch-search/retry/{jobId}
+          method: post
+      - httpApi:
+          path: /batch-search/cancel/{jobId}
+          method: post
+      - httpApi:
+          path: /batch-search/resume/{jobId}
+          method: post
+      - httpApi:
+          path: /batch-search/jobs/{jobId}
+          method: delete
+      - httpApi:
+          path: /batch-search/jobs/{jobId}/selections
+          method: put
+      # Keep Lambda warm to avoid cold starts
+      - schedule:
+          rate: rate(5 minutes)
+          enabled: true
+          input:
+            warmup: true
+            source: "serverless-warmup"
 
 plugins:
   - serverless-python-requirements
@@ -244,6 +320,34 @@ package:
     - '../utils/**'
 
 resources:
+  Resources:
+    # Batch Search Jobs Table for async job processing
+    BatchSearchJobsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:custom.batchSearchJobsTable}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: jobId
+            AttributeType: S
+          - AttributeName: userId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: jobId
+            KeyType: HASH
+        GlobalSecondaryIndexes:
+          - IndexName: userId-index
+            KeySchema:
+              - AttributeName: userId
+                KeyType: HASH
+              - AttributeName: jobId
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+        TimeToLiveSpecification:
+          AttributeName: ttl
+          Enabled: true
+  
   Outputs:
     SearchApiUrl:
       Description: Search API URL
@@ -257,3 +361,9 @@ resources:
       Value: ${self:provider.environment.QDRANT_COLLECTION}
       Export:
         Name: ${self:service}-${self:provider.stage}-qdrant-collection
+    
+    BatchSearchJobsTableName:
+      Description: Batch Search Jobs DynamoDB Table Name
+      Value: ${self:custom.batchSearchJobsTable}
+      Export:
+        Name: ${self:service}-${self:provider.stage}-batch-search-jobs-table

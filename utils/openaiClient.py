@@ -1,10 +1,95 @@
 import os
 import json
 import base64
-from typing import Optional, Dict, Any, List
-from openai import OpenAI
+import time
+import random
+import logging
+from typing import Optional, Dict, Any, List, Callable, TypeVar
+from openai import OpenAI, RateLimitError, APIError, APIConnectionError
 import boto3
 from urllib.parse import urlparse
+
+logger = logging.getLogger(__name__)
+
+# Type variable for generic retry function
+T = TypeVar('T')
+
+
+def retry_with_exponential_backoff(
+    func: Callable[[], T],
+    max_retries: int = 5,
+    base_delay: float = 1.0,
+    max_delay: float = 60.0,
+    exponential_base: float = 2.0,
+    jitter: bool = True,
+    retryable_exceptions: tuple = (RateLimitError, APIConnectionError),
+) -> T:
+    """
+    Retry a function with exponential backoff.
+    
+    Args:
+        func: Function to retry (should take no arguments)
+        max_retries: Maximum number of retry attempts
+        base_delay: Initial delay in seconds
+        max_delay: Maximum delay in seconds
+        exponential_base: Base for exponential calculation
+        jitter: Whether to add random jitter to delays
+        retryable_exceptions: Tuple of exception types to retry on
+        
+    Returns:
+        Result of the function call
+        
+    Raises:
+        The last exception if all retries fail
+    """
+    last_exception = None
+    
+    for attempt in range(max_retries + 1):
+        try:
+            return func()
+        except retryable_exceptions as e:
+            last_exception = e
+            
+            if attempt == max_retries:
+                logger.error(f"All {max_retries} retries exhausted. Last error: {str(e)}")
+                raise
+            
+            # Calculate delay with exponential backoff
+            delay = min(base_delay * (exponential_base ** attempt), max_delay)
+            
+            # Add jitter to prevent thundering herd
+            if jitter:
+                delay = delay * (0.5 + random.random())
+            
+            # Check for Retry-After header in rate limit errors
+            if isinstance(e, RateLimitError) and hasattr(e, 'response'):
+                retry_after = e.response.headers.get('Retry-After')
+                if retry_after:
+                    try:
+                        delay = max(delay, float(retry_after))
+                    except (ValueError, TypeError):
+                        pass
+            
+            logger.warning(
+                f"OpenAI API error (attempt {attempt + 1}/{max_retries + 1}): {str(e)}. "
+                f"Retrying in {delay:.2f}s..."
+            )
+            time.sleep(delay)
+        except APIError as e:
+            # For other API errors, only retry on 5xx errors
+            if hasattr(e, 'status_code') and 500 <= e.status_code < 600:
+                last_exception = e
+                if attempt == max_retries:
+                    raise
+                delay = min(base_delay * (exponential_base ** attempt), max_delay)
+                if jitter:
+                    delay = delay * (0.5 + random.random())
+                logger.warning(f"OpenAI server error (attempt {attempt + 1}): {str(e)}. Retrying in {delay:.2f}s...")
+                time.sleep(delay)
+            else:
+                raise
+    
+    raise last_exception
 
 
 class OpenAIClient:
@@ -44,32 +129,52 @@ class OpenAIClient:
             print(f"Warning: Could not initialize S3 client: {e}")
             self.s3_client = None
     
-    def chat_completion(self, messages: List[Dict[str, str]], model: str = "gpt-4-turbo", response_format: Optional[Dict[str, str]] = None, **kwargs) -> Dict[str, Any]:
+    def chat_completion(
+        self,
+        messages: List[Dict[str, str]],
+        model: str = "gpt-4-turbo",
+        response_format: Optional[Dict[str, str]] = None,
+        max_retries: Optional[int] = None,
+        **kwargs
+    ) -> Dict[str, Any]:
         """
-        Send a chat completion request to OpenAI.
+        Send a chat completion request to OpenAI with automatic retry on rate limits.
         
         Args:
             messages: List of message dictionaries with 'role' and 'content' keys
             model: Model to use for completion (default: gpt-4-turbo)
             response_format: Response format specification (e.g., {"type": "json_object"})
+            max_retries: Maximum retry attempts (default: from env OPENAI_MAX_RETRIES or 5)
             **kwargs: Additional parameters to pass to the completion request
             
         Returns:
             Raw response from OpenAI API
         """
+        if max_retries is None:
+            max_retries = int(os.getenv('OPENAI_MAX_RETRIES', '5'))
+        
+        base_delay = float(os.getenv('OPENAI_RETRY_BASE_DELAY', '1.0'))
+        
+        params = {
+            "model": model,
+            "messages": messages,
+            **kwargs
+        }
+        
+        if response_format:
+            params["response_format"] = response_format
+        
+        def make_request():
+            return self.client.chat.completions.create(**params)
+        
         try:
-            params = {
-                "model": model,
-                "messages": messages,
-                **kwargs
-            }
-            
-            if response_format:
-                params["response_format"] = response_format
-            
-            response = self.client.chat.completions.create(**params)
-            return response
+            return retry_with_exponential_backoff(
+                func=make_request,
+                max_retries=max_retries,
+                base_delay=base_delay,
+            )
         except Exception as e:
+            logger.error(f"Chat completion failed after retries: {str(e)}")
             raise Exception(f"Chat completion failed: {str(e)}")
     
     def chat_completion_json(self, messages: List[Dict[str, str]], model: str = "gpt-4-turbo", **kwargs) -> Dict[str, Any]:

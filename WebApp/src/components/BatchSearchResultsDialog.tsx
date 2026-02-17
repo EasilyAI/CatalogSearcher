@@ -9,11 +9,13 @@ type BatchSearchResultsDialogProps = {
     total: number;
     found: number;
     notFound: number;
+    failed?: number;  // Actual errors (API failures, etc.) - NOT "no results"
   };
   results?: Array<{
     itemIndex: number;
     query: string;
     matches: Array<any>;
+    error?: string;  // Only present if there was an actual error
   }>;
 };
 
@@ -93,6 +95,27 @@ const BatchSearchResultsDialog: React.FC<BatchSearchResultsDialogProps> = ({
                 <div className="batch-search-stat-label">No Matches Found</div>
               </div>
             </div>
+
+            {/* Only show failed card if there are actual errors */}
+            {summary.failed && summary.failed > 0 && (
+              <div className="batch-search-stat-card error">
+                <div className="batch-search-stat-icon">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                    <path
+                      d="M12 9V11M12 15H12.01M5.07183 19H18.9282C20.4678 19 21.4301 17.3333 20.6603 16L13.7321 4C12.9623 2.66667 11.0377 2.66667 10.2679 4L3.33975 16C2.56995 17.3333 3.53223 19 5.07183 19Z"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </div>
+                <div className="batch-search-stat-content">
+                  <div className="batch-search-stat-value">{summary.failed}</div>
+                  <div className="batch-search-stat-label">Search Errors</div>
+                </div>
+              </div>
+            )}
 
             <div className="batch-search-stat-card info">
               <div className="batch-search-stat-icon">

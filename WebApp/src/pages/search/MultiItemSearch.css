@@ -7,14 +7,31 @@
   background: #F7FAFA;
 }
 
+/* Layout with sidebar */
+.multi-item-search-layout {
+  display: flex;
+  gap: 16px;
+  width: 100%;
+  max-width: 1600px;
+  margin: 0 auto;
+  align-items: flex-start; /* Align sidebar to top */
+}
+
 .multi-item-search-content {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   padding: 0px;
-  width: 100%;
+  flex: 1;
+  min-width: 0; /* Prevent flex overflow */
   max-width: 1200px;
-  margin: 0 auto;
+}
+
+/* Responsive: hide sidebar on smaller screens */
+@media (max-width: 900px) {
+  .multi-item-search-layout {
+    flex-direction: column;
+  }
 }
 
 /* Page Header - Matching SingleSearch */
@@ -874,6 +891,35 @@
   background-color: var(--color-primary-hover);
 }
 
+.save-progress-button {
+  display: flex;
+  min-width: 84px;
+  max-width: 480px;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  height: 40px;
+  padding: 0 16px;
+  background-color: #f59e0b;
+  color: #FFFFFF;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: normal;
+  border: none;
+  transition: background-color 0.2s ease;
+}
+
+.save-progress-button:hover {
+  background-color: #d97706;
+}
+
+.save-progress-button:disabled {
+  background-color: #9ca3af;
+  cursor: not-allowed;
+}
+
 .back-button {
   display: flex;
   min-width: 84px;
@@ -1269,10 +1315,71 @@
   margin: 0;
 }
 
+/* Progress Bar for Async Batches */
+.batch-progress-container {
+  width: 100%;
+  max-width: 400px;
+  margin: 16px 0;
+}
+
+.batch-progress-bar {
+  width: 100%;
+  height: 8px;
+  background: #E2E8F0;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.batch-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--color-primary) 0%, #60A5FA 100%);
+  border-radius: 4px;
+  transition: width 0.3s ease-out;
+  animation: progress-pulse 2s ease-in-out infinite;
+}
+
+@keyframes progress-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.85; }
+}
+
+.batch-progress-stats {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  font-family: var(--font-family);
+  font-size: 13px;
+}
+
+.batch-progress-count {
+  color: #475569;
+  font-weight: 600;
+}
+
+.batch-progress-success {
+  color: #059669;
+  font-weight: 500;
+}
+
+.batch-progress-failed {
+  color: #DC2626;
+  font-weight: 500;
+}
+
+.batch-progress-time {
+  font-family: var(--font-family);
+  font-size: 12px;
+  color: #94A3B8;
+  margin-top: 8px;
+}
+
 /* Error Banner */
 .error-banner {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 12px;
   padding: 16px;
   margin: 16px;
@@ -1287,6 +1394,106 @@
 .error-banner svg {
   flex-shrink: 0;
   color: #DC2626;
+}
+
+/* Warning variant for partial success */
+.error-banner.warning {
+  background: #FEF3C7;
+  border-color: #FCD34D;
+  color: #92400E;
+}
+
+.error-banner.warning svg {
+  color: #D97706;
+}
+
+/* Retry Button in Error Banner */
+.retry-failed-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  padding: 6px 12px;
+  background: #3B82F6;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.retry-failed-btn:hover {
+  background: #2563EB;
+  transform: translateY(-1px);
+}
+
+.retry-failed-btn:active {
+  transform: translateY(0);
+}
+
+.retry-failed-btn svg {
+  color: white;
+}
+
+/* Error Banner Actions Container */
+.error-banner-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+/* Resume Job Button */
+.resume-job-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: #059669;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.resume-job-btn:hover {
+  background: #047857;
+  transform: translateY(-1px);
+}
+
+.resume-job-btn:active {
+  transform: translateY(0);
+}
+
+.resume-job-btn svg {
+  color: white;
+}
+
+/* Check Status Button */
+.check-status-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  background: #6B7280;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.check-status-btn:hover {
+  background: #4B5563;
+}
+
+.check-status-btn svg {
+  color: white;
 }
 
 /* Validation Errors Sidebar */
@@ -1691,4 +1898,28 @@
   padding: 40px 20px;
   color: #6b7280;
   font-size: 14px;
+}
+
+/* ============================================
+   Search Header with Jobs Panel
+   ============================================ */
+
+.search-header-actions {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+/* Responsive adjustments for header with jobs panel */
+@media (max-width: 900px) {
+  .search-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .search-header-actions {
+    margin-top: 16px;
+    justify-content: flex-end;
+  }
 }

@@ -1,0 +1,709 @@
+/* BatchJobsPanel.css - Dropdown panel for batch jobs management */
+
+/* Dropdown Container */
+.batch-jobs-dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+/* Toggle Button */
+.jobs-toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  color: #4b5563;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.jobs-toggle-btn:hover {
+  background: #f9fafb;
+  border-color: #d1d5db;
+  color: #1f2937;
+}
+
+.jobs-toggle-btn.active {
+  background: #f3f4f6;
+  border-color: var(--color-primary, #2563eb);
+  color: var(--color-primary, #2563eb);
+}
+
+.jobs-toggle-btn.has-active {
+  border-color: #f59e0b;
+}
+
+.jobs-toggle-btn svg {
+  flex-shrink: 0;
+}
+
+/* Job Count Badge */
+.jobs-count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  background: #e5e7eb;
+  color: #4b5563;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 9px;
+}
+
+.jobs-count-badge.active {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+/* Dropdown Panel */
+.jobs-dropdown-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 340px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12), 0 2px 10px rgba(0, 0, 0, 0.08);
+  z-index: 1000;
+  overflow: hidden;
+  animation: dropdownFadeIn 0.15s ease;
+}
+
+@keyframes dropdownFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Dropdown Header */
+.dropdown-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid #f3f4f6;
+  background: #fafafa;
+}
+
+.dropdown-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.dropdown-refresh-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.dropdown-refresh-btn:hover {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.dropdown-refresh-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.dropdown-refresh-btn svg.spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Dropdown Error */
+.dropdown-error {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  margin: 8px 12px 0;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  font-size: 12px;
+  color: #dc2626;
+}
+
+.dropdown-error button {
+  background: transparent;
+  border: none;
+  color: #dc2626;
+  cursor: pointer;
+  padding: 0 4px;
+  font-size: 14px;
+}
+
+/* Jobs List */
+.dropdown-jobs-list {
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 8px;
+}
+
+.dropdown-jobs-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.dropdown-jobs-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.dropdown-jobs-list::-webkit-scrollbar-thumb {
+  background: #e5e7eb;
+  border-radius: 3px;
+}
+
+.dropdown-jobs-list::-webkit-scrollbar-thumb:hover {
+  background: #d1d5db;
+}
+
+/* Loading & Empty States */
+.dropdown-loading,
+.dropdown-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 32px 16px;
+  color: #9ca3af;
+  font-size: 13px;
+}
+
+.loading-spinner {
+  width: 24px;
+  height: 24px;
+  border: 2px solid #e5e7eb;
+  border-top-color: var(--color-primary, #2563eb);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+/* Job Item */
+.dropdown-job-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  background: #fafafa;
+  border: 1px solid #f3f4f6;
+  border-radius: 8px;
+  margin-bottom: 6px;
+  transition: all 0.15s ease;
+}
+
+.dropdown-job-item:last-child {
+  margin-bottom: 0;
+}
+
+.dropdown-job-item:hover {
+  background: #f3f4f6;
+  border-color: #e5e7eb;
+}
+
+/* Status-based left border accent */
+.dropdown-job-item.processing {
+  border-left: 3px solid #3b82f6;
+}
+
+.dropdown-job-item.partial {
+  border-left: 3px solid #f59e0b;
+}
+
+.dropdown-job-item.completed {
+  border-left: 3px solid #22c55e;
+}
+
+.dropdown-job-item.failed {
+  border-left: 3px solid #ef4444;
+}
+
+.dropdown-job-item.cancelled {
+  border-left: 3px solid #9ca3af;
+}
+
+.dropdown-job-item.pending {
+  border-left: 3px solid #6b7280;
+}
+
+/* Job Main Info */
+.job-main-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.job-top-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.job-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: #1f2937;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 160px;
+}
+
+.job-bottom-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: #6b7280;
+}
+
+.job-items-count {
+  color: #9ca3af;
+}
+
+.job-timestamp {
+  color: #9ca3af;
+}
+
+/* Job Status Badge */
+.job-status-badge {
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.status-completed {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.status-processing {
+  background: #dbeafe;
+  color: #2563eb;
+}
+
+.status-partial {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.status-failed {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.status-cancelled {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+.status-pending {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+/* Mini Progress Bar */
+.job-mini-progress {
+  height: 2px;
+  background: #e5e7eb;
+  border-radius: 1px;
+  margin-top: 6px;
+  overflow: hidden;
+}
+
+.job-mini-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+  border-radius: 1px;
+  transition: width 0.3s ease;
+}
+
+/* Job Action Buttons */
+.job-action-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.job-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.job-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.job-btn.view {
+  background: #dbeafe;
+  color: #2563eb;
+}
+
+.job-btn.view:hover:not(:disabled) {
+  background: #bfdbfe;
+}
+
+.job-btn.resume {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.job-btn.resume:hover:not(:disabled) {
+  background: #bbf7d0;
+}
+
+.job-btn.cancel {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.job-btn.cancel:hover:not(:disabled) {
+  background: #fecaca;
+}
+
+.job-btn.delete {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+.job-btn.delete:hover:not(:disabled) {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.btn-mini-spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(0, 0, 0, 0.1);
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+/* ============================================
+   SIDEBAR MODE STYLES
+   ============================================ */
+
+.batch-jobs-sidebar {
+  width: 240px;
+  height: fit-content;
+  max-height: calc(100vh - 200px);
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  position: sticky;
+  top: 20px;
+}
+
+/* COLLAPSED STATE - Shows as a compact vertical bar with title */
+.batch-jobs-sidebar.collapsed {
+  width: auto;
+  min-width: 48px;
+  height: auto;
+  max-height: none;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.batch-jobs-sidebar.collapsed .sidebar-header {
+  padding: 10px 8px;
+  flex-direction: row;
+  gap: 8px;
+  border-bottom: none;
+  align-items: center;
+}
+
+.batch-jobs-sidebar.collapsed .sidebar-title-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+}
+
+.batch-jobs-sidebar.collapsed .sidebar-title-row svg {
+  width: 16px;
+  height: 16px;
+}
+
+.sidebar-title-collapsed {
+  font-size: 12px;
+  font-weight: 600;
+  color: #374151;
+  white-space: nowrap;
+}
+
+.batch-jobs-sidebar.collapsed .sidebar-actions {
+  flex-direction: row;
+  gap: 4px;
+}
+
+.batch-jobs-sidebar.collapsed .sidebar-action-btn {
+  width: 26px;
+  height: 26px;
+}
+
+.batch-jobs-sidebar.collapsed .sidebar-action-btn.collapse-btn {
+  background: #f3f4f6;
+}
+
+.batch-jobs-sidebar.collapsed .sidebar-action-btn.collapse-btn:hover {
+  background: #e5e7eb;
+}
+
+/* Sidebar Header - EXPANDED */
+.sidebar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 14px;
+  background: linear-gradient(180deg, #fafafa 0%, #f5f5f5 100%);
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.sidebar-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow: hidden;
+}
+
+.sidebar-title-row svg {
+  color: #6b7280;
+  flex-shrink: 0;
+}
+
+.sidebar-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+  white-space: nowrap;
+}
+
+.sidebar-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  background: #e5e7eb;
+  color: #4b5563;
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: 9px;
+  flex-shrink: 0;
+}
+
+.sidebar-badge.active {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  color: #b45309;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+/* Sidebar Actions */
+.sidebar-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.sidebar-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: #9ca3af;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.sidebar-action-btn:hover {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.sidebar-action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.sidebar-action-btn svg.spinning {
+  animation: spin 1s linear infinite;
+}
+
+/* Sidebar Error */
+.sidebar-error {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  margin: 8px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  font-size: 11px;
+  color: #dc2626;
+}
+
+.sidebar-error button {
+  background: transparent;
+  border: none;
+  color: #dc2626;
+  cursor: pointer;
+  padding: 0 4px;
+  font-size: 13px;
+}
+
+/* Sidebar Jobs List */
+.sidebar-jobs-list {
+  max-height: 350px;
+  overflow-y: auto;
+  padding: 8px;
+}
+
+.sidebar-jobs-list::-webkit-scrollbar {
+  width: 5px;
+}
+
+.sidebar-jobs-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-jobs-list::-webkit-scrollbar-thumb {
+  background: #e5e7eb;
+  border-radius: 3px;
+}
+
+.sidebar-jobs-list::-webkit-scrollbar-thumb:hover {
+  background: #d1d5db;
+}
+
+/* Sidebar uses same job item styles as dropdown */
+.batch-jobs-sidebar .dropdown-job-item {
+  padding: 8px 10px;
+}
+
+.batch-jobs-sidebar .job-name {
+  max-width: 100px;
+  font-size: 12px;
+}
+
+.batch-jobs-sidebar .job-status-badge {
+  font-size: 8px;
+  padding: 2px 5px;
+}
+
+.batch-jobs-sidebar .job-bottom-row {
+  font-size: 10px;
+}
+
+.batch-jobs-sidebar .job-btn {
+  width: 24px;
+  height: 24px;
+}
+
+.batch-jobs-sidebar .job-btn svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* Collapsed state hides jobs and error */
+.batch-jobs-sidebar.collapsed .sidebar-jobs-list,
+.batch-jobs-sidebar.collapsed .sidebar-error {
+  display: none;
+}
+
+/* Hide refresh button when collapsed */
+.batch-jobs-sidebar.collapsed .sidebar-action-btn:not(.collapse-btn) {
+  display: none;
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+  .batch-jobs-sidebar {
+    width: 200px;
+  }
+  
+  .batch-jobs-sidebar .job-name {
+    max-width: 90px;
+  }
+}
+
+@media (max-width: 900px) {
+  .batch-jobs-sidebar {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .jobs-dropdown-panel {
+    width: 300px;
+    right: -60px;
+  }
+  
+  .jobs-toggle-btn span {
+    display: none;
+  }
+  
+  .jobs-toggle-btn {
+    padding: 8px 10px;
+  }
+}

@@ -401,4 +401,238 @@ def rerank_results(
         return results[:top_k]
 
 
+def batch_rerank_results(
+    queries_with_results: List[Dict[str, Any]],
+    top_k: int = 5,
+) -> List[Dict[str, Any]]:
+    """
+    Re-rank multiple search queries in a single OpenAI call to reduce API calls.
+    
+    This is more efficient than calling rerank_results() for each item individually,
+    reducing N API calls to 1 call for N items (within token limits).
+    
+    Args:
+        queries_with_results: List of dicts, each containing:
+            - query: The search query (description)
+            - results: List of candidate results (with full searchText)
+            - itemIndex: Original item index for mapping back
+        top_k: Number of top results per query
+        
+    Returns:
+        List of dicts with reranked results:
+            - itemIndex: Original item index
+            - results: Reranked results list
+    """
+    if not queries_with_results:
+        return []
+    
+    # If only one query, delegate to single rerank
+    if len(queries_with_results) == 1:
+        item = queries_with_results[0]
+        reranked = rerank_results(
+            query=item['query'],
+            results=item['results'],
+            top_k=top_k
+        )
+        return [{
+            'itemIndex': item['itemIndex'],
+            'results': reranked
+        }]
+    
+    try:
+        client = _get_openai_client()
+        
+        # Serialize all queries and their results
+        batch_data = []
+        for item in queries_with_results:
+            query = item['query']
+            results = item['results']
+            item_index = item['itemIndex']
+            
+            # Extract specs from query for better matching
+            query_specs = _extract_specs_from_query(query)
+            
+            serialized_results = []
+            for idx, result in enumerate(results):
+                search_text = result.get("searchText", "")
+                product_specs = _extract_specifications(search_text)
+                
+                serialized_results.append({
+                    "index": idx,
+                    "orderingNumber": result.get("orderingNumber"),
+                    "category": result.get("category"),
+                    "score": result.get("score"),
+                    "searchText": search_text,
+                    "specifications": product_specs if product_specs else None,
+                })
+            
+            batch_data.append({
+                "itemIndex": item_index,
+                "query": query,
+                "querySpecs": query_specs if query_specs else None,
+                "candidates": serialized_results
+            })
+        
+        # Build batch reranking prompt - using the same tested logic as single rerank_results
+        # All queries in batch are description-based (ordering number queries don't need reranking)
+        system_prompt = (
+            "You are a retrieval re-ranking engine that optimizes search results for relevance.\n\n"
+            "You will receive MULTIPLE search queries (PRODUCT DESCRIPTIONS), each with their own candidate results.\n"
+            "For EACH query, you must:\n"
+            "1. Carefully read the query and each candidate's fields (orderingNumber, category, searchText, specifications, score, relevance).\n"
+            "2. Extract any technical specifications from the query (e.g., size, pressure, material, temperature, thread type).\n"
+            "   Treat NUMERIC SPECIFICATIONS (especially sizes and pressures) as VERY IMPORTANT SIGNALS, but do not fully disqualify other items.\n"
+            "3. Judge how relevant each candidate is to the query, prioritizing:\n"
+            "   - TECHNICAL SPECIFICATIONS MATCH (HIGHEST PRIORITY SIGNAL):\n"
+            "     * Compare specifications from the query with product specifications.\n"
+            "     * Products whose size/pressure/material clearly MATCH the query should be ranked at the top with high relevancy scores.\n"
+            "     * Products whose size/pressure/material clearly DO NOT match the query requirements should receive much lower relevancy scores and appear below matching items, but may still appear in the list if there are few or no exact matches.\n"
+            "     * When the query includes an explicit size (e.g. '1/4 inch', '3/8\"', '1 inch'), items with that SAME size should be ranked above items with different sizes.\n"
+            "     * Do NOT rank items with different sizes (e.g. '1/4', '3/8', '1/2', '1\"') above exact size matches, unless the query clearly allows a range or alternatives.\n"
+            "   - Semantic match between the query description and searchText.\n"
+            "   - Category alignment when relevant.\n"
+            "   - The original similarity score and relevance label as a soft signal only.\n"
+            "4. CRITICAL: Strongly down-rank products with specifications that are clearly incompatible with the query (give them noticeably lower relevancy scores), rather than completely rejecting them.\n"
+            "5. Select the single best set of top results strictly from the provided list for each query.\n\n"
+            "Important rules:\n"
+            "- Process ALL queries in the batch.\n"
+            "- NEVER invent or fabricate new items.\n"
+            "- ONLY reference candidates by their provided `index`.\n"
+            "- SPECIFICATIONS ARE CRITICAL: Products with incompatible specifications must be ranked much lower and should not appear above exact or clearly compatible matches, but they can still appear as lower-ranked options.\n"
+            "- If several items are similarly relevant, prefer those with clearer, more specific searchText and matching specifications.\n"
+            "- Do not perform any fuzzy creative interpretation; be precise and conservative when comparing numeric values like sizes and pressures.\n\n"
+            "Output format:\n"
+            "- You MUST respond with valid JSON only, no extra text.\n"
+            "- The JSON must have the shape:\n"
+            '  {"results": [{"itemIndex": <original item index>, "top_indices": [i1, i2, ...], "relevancy_scores": {"i1": 0.95, "i2": 0.85, ...}}, ...]}\n'
+            "- `top_indices` must be a list of unique integers that exist in the input indices for that query.\n"
+            "- `relevancy_scores` must be a dictionary mapping index (as string) to a relevancy score (0.0-1.0).\n"
+            "- Return them in the desired order from most relevant to least relevant.\n"
+            "- Relevancy scores should reflect how well each result matches the query, with special attention to specification compatibility, especially exact numeric matches for size and pressure.\n"
+        )
+        
+        user_prompt = (
+            f"Re-rank the following {len(batch_data)} search queries.\n"
+            f"Return at most {top_k} results per query.\n\n"
+            f"Queries with candidates (JSON):\n"
+            f"{json.dumps(batch_data, ensure_ascii=False)}"
+        )
+        
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ]
+        
+        logger.info(f"Batch reranking {len(batch_data)} queries")
+        
+        response_json = client.chat_completion_json(
+            messages=messages,
+            model=os.getenv("OPENAI_RERANK_MODEL", "gpt-4o-mini"),
+            temperature=0,
+        )
+        
+        logger.info(f"Batch rerank response received")
+        
+        # Parse response and rebuild results
+        batch_results = response_json.get("results", [])
+        
+        # Create a map from itemIndex to original data for quick lookup
+        original_data_map = {item['itemIndex']: item for item in queries_with_results}
+        
+        output = []
+        for result_entry in batch_results:
+            item_index = result_entry.get("itemIndex")
+            top_indices = result_entry.get("top_indices", [])
+            relevancy_scores = result_entry.get("relevancy_scores", {})
+            
+            if item_index is None or item_index not in original_data_map:
+                continue
+            
+            original_item = original_data_map[item_index]
+            original_results = original_item['results']
+            
+            # Validate and build reranked results
+            reranked = []
+            seen = set()
+            
+            for idx in top_indices:
+                try:
+                    i = int(idx)
+                except (TypeError, ValueError):
+                    continue
+                
+                if 0 <= i < len(original_results) and i not in seen:
+                    seen.add(i)
+                    result = original_results[i].copy()
+                    
+                    # Update score based on relevancy
+                    idx_str = str(i)
+                    if idx_str in relevancy_scores:
+                        try:
+                            relevancy_score = float(relevancy_scores[idx_str])
+                            result['score'] = relevancy_score
+                            if relevancy_score >= 0.70:
+                                result['relevance'] = 'high'
+                            elif relevancy_score >= 0.50:
+                                result['relevance'] = 'medium'
+                            else:
+                                result['relevance'] = 'low'
+                        except (ValueError, TypeError):
+                            pass
+                    
+                    reranked.append(result)
+                    
+                    if len(reranked) >= top_k:
+                        break
+            
+            # Fill remaining slots if needed
+            if len(reranked) < top_k:
+                remaining = [
+                    (i, original_results[i].get('score', 0.0))
+                    for i in range(len(original_results))
+                    if i not in seen
+                ]
+                remaining.sort(key=lambda x: x[1], reverse=True)
+                for i, _ in remaining[:top_k - len(reranked)]:
+                    reranked.append(original_results[i].copy())
+            
+            output.append({
+                'itemIndex': item_index,
+                'results': reranked
+            })
+        
+        # Handle any queries that weren't in the response
+        responded_indices = {r['itemIndex'] for r in output}
+        for item in queries_with_results:
+            if item['itemIndex'] not in responded_indices:
+                # Fall back to original order
+                output.append({
+                    'itemIndex': item['itemIndex'],
+                    'results': item['results'][:top_k]
+                })
+        
+        logger.info(f"Batch rerank complete: processed {len(output)} queries")
+        return output
+        
+    except Exception as e:
+        logger.error(f"Error during batch reranking: {str(e)}", exc_info=True)
+        # Fall back to individual reranking or original order
+        output = []
+        for item in queries_with_results:
+            try:
+                reranked = rerank_results(
+                    query=item['query'],
+                    results=item['results'],
+                    top_k=top_k
+                )
+                output.append({
+                    'itemIndex': item['itemIndex'],
+                    'results': reranked
+                })
+            except Exception:
+                output.append({
+                    'itemIndex': item['itemIndex'],
+                    'results': item['results'][:top_k]
+                })
+        return output
 
