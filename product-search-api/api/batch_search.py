@@ -248,9 +248,7 @@ def _handle_sync_batch_search(
     items: List[Dict[str, Any]],
     search_params: Dict[str, Any]
 ) -> Dict[str, Any]:
-    """
-    Handle synchronous batch search for small batches.
-    """
+    """Handle synchronous batch search for small batches."""
     service = get_search_service()
     results = _execute_batch_searches(
         service=service,
@@ -277,6 +275,8 @@ def _handle_sync_batch_search(
     }
     
     return create_response(200, response_body)
+    
+
 def _handle_async_batch_search(
     user_id: str,
     items: List[Dict[str, Any]],
@@ -467,8 +467,8 @@ def _process_batch_job(
         
         processed_count += len(chunk_results)
         
-        # Save chunk to DynamoDB
-        job_service.append_results_chunk(
+        # Save chunk to DynamoDB - check for success
+        save_success = job_service.append_results_chunk(
             job_id=job_id,
             results=chunk_results,
             processed_count=processed_count,
@@ -476,7 +476,10 @@ def _process_batch_job(
             failed_count=failed_count
         )
         
-        logger.info(f"Job {job_id} progress: {processed_count}/{len(items)} items processed")
+        if not save_success:
+            logger.error(f"Job {job_id}: FAILED to save chunk with {len(chunk_results)} results! Data may be lost.")
+        
+        logger.info(f"Job {job_id} progress: {processed_count}/{len(items)} items processed (save_success={save_success})")
     
     # Complete the job
     total_items = len(items)
@@ -628,23 +631,28 @@ def _process_batch_job_parallel(
                 completed_chunks += 1
                 processed_count = start_from_index + len(all_results)
                 
-                # Update progress in DynamoDB after each worker completes
-                job_service.update_job_progress(
-                    job_id=job_id,
-                    processed_count=processed_count,
-                    successful_count=total_successful,
-                    failed_count=total_failed
-                )
-                
-                # Save results chunk
+                # Save results chunk FIRST (before updating progress)
+                # This ensures we don't lose results if DynamoDB save fails
                 if worker_results:
-                    job_service.append_results_chunk(
+                    save_success = job_service.append_results_chunk(
                         job_id=job_id,
                         results=worker_results,
                         processed_count=processed_count,
                         successful_count=total_successful,
                         failed_count=total_failed
                     )
+                    if not save_success:
+                        logger.error(f"Job {job_id}: FAILED to save {len(worker_results)} results from worker {worker_id}! Results may be lost.")
+                        # Don't update progress if save failed - results are not persisted
+                        continue
+                
+                # Update progress in DynamoDB after successful save
+                job_service.update_job_progress(
+                    job_id=job_id,
+                    processed_count=processed_count,
+                    successful_count=total_successful,
+                    failed_count=total_failed
+                )
                 
                 logger.info(f"Job {job_id}: Worker {worker_id} done. Progress: {processed_count}/{len(items)} ({completed_chunks}/{num_workers} workers)")
                 
@@ -1198,10 +1206,12 @@ def handle_batch_search_results(event: Dict[str, Any]) -> Dict[str, Any]:
     """
     Handle GET /batch-search/results/{jobId} requests.
     
-    Returns full job results.
+    Returns full job results, sorted by itemIndex for consistent ordering.
     """
     try:
         job_id = get_path_parameter(event, 'jobId')
+        logger.info(f"[get_results] Fetching results for job: {job_id}")
+        
         if not job_id:
             return create_response(400, {'error': 'Missing jobId parameter'})
         
@@ -1209,17 +1219,52 @@ def handle_batch_search_results(event: Dict[str, Any]) -> Dict[str, Any]:
         job = job_service.get_job(job_id)
         
         if not job:
+            logger.error(f"[get_results] Job not found: {job_id}")
             return create_response(404, {'error': 'Job not found', 'jobId': job_id})
+        
+        # CRITICAL: Sort results by itemIndex to ensure consistent ordering
+        # Results may arrive out of order due to parallel processing
+        results = job.get('results', [])
+        
+        # DIAGNOSTIC: Check for duplicate itemIndex values
+        item_indices = [r.get('itemIndex') for r in results if r.get('itemIndex') is not None]
+        unique_indices = set(item_indices)
+        if len(item_indices) != len(unique_indices):
+            logger.warning(f"[get_results] Job {job_id}: DUPLICATE INDICES DETECTED! "
+                          f"Total: {len(item_indices)}, Unique: {len(unique_indices)}")
+            # Deduplicate - keep the first occurrence
+            seen_indices = set()
+            deduplicated_results = []
+            for result in results:
+                idx = result.get('itemIndex')
+                if idx not in seen_indices:
+                    seen_indices.add(idx)
+                    deduplicated_results.append(result)
+            results = deduplicated_results
+            logger.info(f"[get_results] After deduplication: {len(results)} results")
+        
+        sorted_results = sorted(results, key=lambda r: r.get('itemIndex', 0))
+        
+        # Log results summary
+        user_selections = job.get('userSelections', {})
+        total_items = job.get('totalItems', 0)
+        logger.info(f"[get_results] Job {job_id}: {len(sorted_results)} results (of {total_items} total), "
+                   f"{len(user_selections)} user selections")
+        if sorted_results:
+            first_idx = sorted_results[0].get('itemIndex')
+            last_idx = sorted_results[-1].get('itemIndex')
+            logger.info(f"[get_results] Results range: itemIndex {first_idx} to {last_idx}")
         
         return create_response(200, {
             'jobId': job_id,
             'status': job.get('status'),
-            'results': job.get('results', []),
+            'results': sorted_results,
             'summary': job.get('summary'),
             'errors': job.get('errors', []),
             'failedItemIndices': job.get('failedItemIndices', []),
             'userSelections': job.get('userSelections', {}),
             'fileName': job.get('fileName', ''),
+            'totalItems': job.get('totalItems', len(sorted_results)),
             'createdAt': job.get('createdAt'),
             'updatedAt': job.get('updatedAt')
         })
@@ -1409,11 +1454,16 @@ def handle_batch_search_save_selections(event: Dict[str, Any]) -> Dict[str, Any]
     """
     try:
         job_id = get_path_parameter(event, 'jobId')
+        logger.info(f"[save_selections] Extracted jobId: {job_id}")
+        
         if not job_id:
+            logger.error("[save_selections] Missing jobId parameter")
             return create_response(400, {'error': 'Missing jobId parameter'})
         
         body = get_request_body(event)
         selections = body.get('selections', {})
+        logger.info(f"[save_selections] Received {len(selections)} selections for job {job_id}")
+        logger.debug(f"[save_selections] Selection keys: {list(selections.keys())[:10]}...")
         
         if not isinstance(selections, dict):
             return create_response(400, {'error': 'Selections must be an object'})
@@ -1423,9 +1473,11 @@ def handle_batch_search_save_selections(event: Dict[str, Any]) -> Dict[str, Any]
         # Verify job exists
         job = job_service.get_job_status(job_id)
         if not job:
+            logger.error(f"[save_selections] Job not found: {job_id}")
             return create_response(404, {'error': 'Job not found', 'jobId': job_id})
         
         # Save selections
+        logger.info(f"[save_selections] Saving selections for job {job_id}")
         success = job_service.save_user_selections(job_id, selections)
         
         if success:

@@ -298,10 +298,11 @@ class BatchJobService:
         results: List[Dict[str, Any]],
         processed_count: int,
         successful_count: int,
-        failed_count: int
+        failed_count: int,
+        max_retries: int = 3
     ) -> bool:
         """
-        Append a chunk of results to the job.
+        Append a chunk of results to the job with retry logic.
         
         Args:
             job_id: Job ID
@@ -309,41 +310,52 @@ class BatchJobService:
             processed_count: Total processed items so far
             successful_count: Total successful items so far
             failed_count: Total failed items so far
+            max_retries: Maximum number of retry attempts
             
         Returns:
             True if successful
         """
-        try:
-            serialized_results = self._serialize_for_dynamodb(results)
-            
-            self.table.update_item(
-                Key={'jobId': job_id},
-                UpdateExpression='''
-                    SET results = list_append(if_not_exists(results, :empty_list), :new_results),
-                        processedItems = :processed,
-                        successfulItems = :successful,
-                        failedItems = :failed,
-                        currentChunk = currentChunk + :one,
-                        updatedAt = :now,
-                        #s = :status
-                ''',
-                ExpressionAttributeValues={
-                    ':new_results': serialized_results,
-                    ':empty_list': [],
-                    ':processed': processed_count,
-                    ':successful': successful_count,
-                    ':failed': failed_count,
-                    ':one': 1,
-                    ':now': datetime.utcnow().isoformat(),
-                    ':status': JobStatus.PROCESSING
-                },
-                ExpressionAttributeNames={'#s': 'status'}
-            )
-            logger.info(f"Appended {len(results)} results to job {job_id} (processed: {processed_count})")
-            return True
-        except Exception as e:
-            logger.error(f"Error appending results to job {job_id}: {str(e)}")
-            return False
+        import time
+        
+        serialized_results = self._serialize_for_dynamodb(results)
+        
+        for attempt in range(max_retries):
+            try:
+                self.table.update_item(
+                    Key={'jobId': job_id},
+                    UpdateExpression='''
+                        SET results = list_append(if_not_exists(results, :empty_list), :new_results),
+                            processedItems = :processed,
+                            successfulItems = :successful,
+                            failedItems = :failed,
+                            currentChunk = currentChunk + :one,
+                            updatedAt = :now,
+                            #s = :status
+                    ''',
+                    ExpressionAttributeValues={
+                        ':new_results': serialized_results,
+                        ':empty_list': [],
+                        ':processed': processed_count,
+                        ':successful': successful_count,
+                        ':failed': failed_count,
+                        ':one': 1,
+                        ':now': datetime.utcnow().isoformat(),
+                        ':status': JobStatus.PROCESSING
+                    },
+                    ExpressionAttributeNames={'#s': 'status'}
+                )
+                logger.info(f"Appended {len(results)} results to job {job_id} (processed: {processed_count})")
+                return True
+            except Exception as e:
+                logger.error(f"Error appending results to job {job_id} (attempt {attempt + 1}/{max_retries}): {str(e)}")
+                if attempt < max_retries - 1:
+                    # Exponential backoff: 0.5s, 1s, 2s
+                    wait_time = 0.5 * (2 ** attempt)
+                    logger.info(f"Retrying in {wait_time}s...")
+                    time.sleep(wait_time)
+        
+        logger.error(f"FAILED to append {len(results)} results to job {job_id} after {max_retries} attempts!")
+        return False
     
     def add_failed_item(
         self,

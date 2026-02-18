@@ -76,6 +76,13 @@ const MultiItemSearch = () => {
     startTime: null,
   });
   const [lastJobId, setLastJobId] = useState(null); // For retry functionality
+  
+  // Failed items tracking (errors from backend)
+  const [failedItemErrors, setFailedItemErrors] = useState([]); // Array of { itemIndex, error, query, timestamp }
+  const [showFailedItemsPanel, setShowFailedItemsPanel] = useState(false);
+  
+  // Job summary from backend - used for accurate stats when loading existing jobs
+  const [jobSummary, setJobSummary] = useState(null); // { total, found, notFound, failed }
 
   // Set uploaded file if restoring state (only when coming from quotation)
   React.useEffect(() => {
@@ -148,6 +155,9 @@ const MultiItemSearch = () => {
 
     setIsLoading(true);
     setSearchError('');
+    setFailedItemErrors([]); // Clear previous errors
+    setShowFailedItemsPanel(false);
+    setJobSummary(null); // Clear previous job summary
     
     // Initialize progress tracking
     setSearchProgress({
@@ -209,20 +219,26 @@ const MultiItemSearch = () => {
       const transformedItems = validItemsList.map((originalItem, validIndex) => {
         const result = resultMap.get(validIndex);
         if (!result) {
-        return {
-          id: Date.now() + validIndex,
-          ...originalItem, // Preserve all original Excel data
-          isValid: true, // Ensure valid items are marked
-          status: 'No Matches',
-          isExpanded: false,
-          selectedMatch: null,
-          matches: [],
-        };
+          return {
+            id: Date.now() + validIndex,
+            itemIndex: validIndex, // Store the index for save/load consistency
+            itemNumber: validIndex + 1, // Display as 1-based
+            ...originalItem, // Preserve all original Excel data
+            isValid: true, // Ensure valid items are marked
+            status: 'No Matches',
+            isExpanded: false,
+            selectedMatch: null,
+            matches: [],
+          };
         }
 
-        // Map matches and find exact ordering number match
+        // CRITICAL: Use the itemIndex from backend result (should match validIndex)
+        const itemIndex = result.itemIndex !== undefined ? result.itemIndex : validIndex;
+
+        // Map matches - ALWAYS use backend's match ID if available
         const matches = (result.matches || []).map((match, matchIdx) => ({
-          id: `M${validIndex}-${matchIdx + 1}`,
+          // Backend already provides proper IDs - use them for consistency
+          id: match.id || `M${itemIndex}-${matchIdx + 1}`,
           productName: match.productName || match.searchText || '',
           orderingNo: match.orderingNo || match.orderingNumber || '',
           orderingNumber: match.orderingNo || match.orderingNumber || '',
@@ -249,6 +265,8 @@ const MultiItemSearch = () => {
 
         return {
           id: Date.now() + validIndex,
+          itemIndex: itemIndex, // Store the index for save/load consistency
+          itemNumber: itemIndex + 1, // Display as 1-based
           ...originalItem, // Preserve all original Excel data
           isValid: true, // Ensure valid items are marked
           status: matches.length > 0 ? 'Match Found' : 'No Matches',
@@ -409,6 +427,8 @@ const MultiItemSearch = () => {
           if (!result) {
             return {
               id: Date.now() + validIndex,
+              itemIndex: validIndex,
+              itemNumber: validIndex + 1,
               ...originalItem,
               isValid: true,
               status: 'No Matches',
@@ -418,8 +438,12 @@ const MultiItemSearch = () => {
             };
           }
 
+          // Use backend's itemIndex for consistency
+          const itemIndex = result.itemIndex !== undefined ? result.itemIndex : validIndex;
+
           const matches = (result.matches || []).map((match, matchIdx) => ({
-            id: `M${validIndex}-${matchIdx + 1}`,
+            // Use backend's match ID if available
+            id: match.id || `M${itemIndex}-${matchIdx + 1}`,
             productName: match.productName || match.searchText || '',
             orderingNo: match.orderingNo || match.orderingNumber || '',
             orderingNumber: match.orderingNo || match.orderingNumber || '',
@@ -445,6 +469,8 @@ const MultiItemSearch = () => {
 
           return {
             id: Date.now() + validIndex,
+            itemIndex: itemIndex,
+            itemNumber: itemIndex + 1,
             ...originalItem,
             isValid: true,
             status: matches.length > 0 ? 'Match Found' : 'No Matches',
@@ -508,6 +534,12 @@ const MultiItemSearch = () => {
 
   // Handle loading job results from the jobs panel
   const handleLoadJobResults = (jobResults) => {
+    console.log('[handleLoadJobResults] Loading job:', jobResults.jobId);
+    console.log('[handleLoadJobResults] Total results:', jobResults.results?.length);
+    console.log('[handleLoadJobResults] Total items in job:', jobResults.totalItems);
+    console.log('[handleLoadJobResults] User selections:', jobResults.userSelections);
+    console.log('[handleLoadJobResults] Summary from backend:', jobResults.summary);
+    
     if (!jobResults || !jobResults.results) {
       setSearchError('No results available for this job.');
       return;
@@ -516,16 +548,41 @@ const MultiItemSearch = () => {
     setLastJobId(jobResults.jobId);
     setBatchSearchResults(jobResults);
     
-    // Get saved user selections if any
-    const savedSelections = jobResults.userSelections || {};
+    // Store the backend summary for accurate stats display
+    // The summary has: { total, found, notFound, failed }
+    if (jobResults.summary) {
+      setJobSummary(jobResults.summary);
+    } else {
+      // Fallback: calculate from results
+      const resultsCount = jobResults.results?.length || 0;
+      const foundCount = jobResults.results?.filter(r => r.matches && r.matches.length > 0).length || 0;
+      setJobSummary({
+        total: jobResults.totalItems || resultsCount,
+        found: foundCount,
+        notFound: resultsCount - foundCount,
+        failed: 0
+      });
+    }
     
-    // Transform results similar to executeBatchSearch
-    const transformedItems = jobResults.results.map((result, idx) => {
-      // Use the original itemIndex from the result, not the array position
-      const itemIndex = result.itemIndex !== undefined ? result.itemIndex : idx;
+    // Get saved user selections and manual entries
+    const savedSelections = jobResults.userSelections || {};
+    console.log('[handleLoadJobResults] Saved selections keys:', Object.keys(savedSelections));
+    
+    // CRITICAL: Sort results by itemIndex to ensure correct order
+    const sortedResults = [...(jobResults.results || [])].sort((a, b) => {
+      const indexA = a.itemIndex !== undefined ? a.itemIndex : 0;
+      const indexB = b.itemIndex !== undefined ? b.itemIndex : 0;
+      return indexA - indexB;
+    });
+    
+    // Transform results - use sorted results for correct order
+    const transformedItems = sortedResults.map((result, arrayIdx) => {
+      // ALWAYS use the itemIndex from the result - this is the original position
+      const itemIndex = result.itemIndex !== undefined ? result.itemIndex : arrayIdx;
       
+      // Map matches, preserving their original IDs
       const matches = (result.matches || []).map((match, matchIdx) => ({
-        // Match IDs are based on itemIndex, not array position
+        // Use existing match ID or generate based on itemIndex
         id: match.id || `M${itemIndex}-${matchIdx + 1}`,
         productName: match.productName || match.searchText || '',
         orderingNo: match.orderingNo || match.orderingNumber || '',
@@ -539,48 +596,128 @@ const MultiItemSearch = () => {
         relevance: match.relevance || 'low',
       }));
 
-      // Restore saved selection if available
-      // Try multiple keys: itemIndex as number, as string, and array position
-      const savedSelection = savedSelections[itemIndex] || savedSelections[String(itemIndex)] || savedSelections[idx] || savedSelections[String(idx)];
-      const hasSelection = savedSelection && matches.some(m => m.id === savedSelection);
+      // Restore saved selection - check by itemIndex (the key used when saving)
+      // savedSelections is keyed by itemIndex (as string)
+      const savedSelection = savedSelections[String(itemIndex)] || savedSelections[itemIndex];
+      
+      // Check if the saved selection is a valid match ID or a manual entry
+      let selectedMatch = null;
+      let manualOrderingNo = null;
+      
+      if (savedSelection) {
+        // Check if it's a match ID (starts with 'M') or a manual ordering number
+        if (typeof savedSelection === 'string' && savedSelection.startsWith('M')) {
+          // It's a match ID - verify it exists in matches
+          if (matches.some(m => m.id === savedSelection)) {
+            selectedMatch = savedSelection;
+          }
+        } else if (typeof savedSelection === 'object') {
+          // It's a selection object with possible manual entry
+          if (savedSelection.matchId && matches.some(m => m.id === savedSelection.matchId)) {
+            selectedMatch = savedSelection.matchId;
+          }
+          if (savedSelection.manualOrderingNo) {
+            manualOrderingNo = savedSelection.manualOrderingNo;
+          }
+        } else if (typeof savedSelection === 'string' && !savedSelection.startsWith('M')) {
+          // It might be a manual ordering number saved directly
+          manualOrderingNo = savedSelection;
+        }
+      }
+
+      // Determine status based on selections
+      let status = 'No Matches';
+      if (selectedMatch || manualOrderingNo) {
+        status = 'Match Found';
+      } else if (matches.length > 0) {
+        status = 'Match Pending';
+      }
 
       return {
-        id: Date.now() + idx,
-        itemIndex: itemIndex, // Store the original itemIndex
-        itemNumber: itemIndex + 1,
+        id: Date.now() + arrayIdx,
+        itemIndex: itemIndex, // The ORIGINAL item index from the job
+        itemNumber: itemIndex + 1, // Display as 1-based
         orderingNumber: result.query,
         description: result.query,
         productType: result.category,
         quantity: result.quantity || 1,
         isValid: true,
-        status: hasSelection ? 'Match Found' : (matches.length > 0 ? 'Match Pending' : 'No Matches'),
+        status: status,
         isExpanded: false,
-        selectedMatch: hasSelection ? savedSelection : null,
+        selectedMatch: selectedMatch,
+        manualOrderingNo: manualOrderingNo,
         matches: matches,
       };
     });
 
+    // Set items and update UI
     setItems(transformedItems);
     setShowResultsDialog(true);
     setUploadedFile({ name: jobResults.fileName || `Job ${jobResults.jobId.slice(0, 8)}...` });
     
-    // Update progress
+    // Store failed item errors for viewing
+    const errors = jobResults.errors || [];
+    
+    // Build failed items info from errors array
+    const failedItems = errors.map(err => ({
+      itemIndex: err.itemIndex,
+      error: err.error || 'Unknown error',
+      timestamp: err.timestamp,
+      retryable: err.retryable !== false,
+    }));
+    
+    // Also include items from results that have errors
+    sortedResults.forEach(result => {
+      if (result.error && !failedItems.some(f => f.itemIndex === result.itemIndex)) {
+        failedItems.push({
+          itemIndex: result.itemIndex,
+          error: result.error,
+          query: result.query,
+          retryable: true,
+        });
+      }
+    });
+    
+    setFailedItemErrors(failedItems);
+    
+    // Update progress - use the job's totalItems field (from backend), or fallback to summary or results count
+    const totalItems = jobResults.totalItems || jobResults.summary?.total || sortedResults.length;
+    const processedCount = sortedResults.length;
+    const successfulCount = jobResults.summary?.found || transformedItems.filter(i => i.matches.length > 0).length;
+    const failedCount = jobResults.summary?.failed || 0;
+    
     setSearchProgress({
       isAsync: true,
       jobId: jobResults.jobId,
-      processed: jobResults.summary?.total || transformedItems.length,
-      total: jobResults.summary?.total || transformedItems.length,
-      successful: jobResults.summary?.found || 0,
-      failed: jobResults.summary?.failed || 0,
+      processed: processedCount,
+      total: totalItems,
+      successful: successfulCount,
+      failed: failedCount,
       status: jobResults.status,
       startTime: null,
     });
     
-    // Notify user if selections were restored
+    // Log restoration info for debugging
     const restoredCount = Object.keys(savedSelections).length;
-    if (restoredCount > 0) {
-      console.log(`Restored ${restoredCount} saved selections`);
+    const selectionsRestored = transformedItems.filter(i => i.selectedMatch || i.manualOrderingNo).length;
+    
+    // DIAGNOSTIC: Check for duplicates in frontend
+    const itemIndices = transformedItems.map(i => i.itemIndex);
+    const uniqueIndices = [...new Set(itemIndices)];
+    if (itemIndices.length !== uniqueIndices.length) {
+      console.warn(`[handleLoadJobResults] DUPLICATE INDICES! Total: ${itemIndices.length}, Unique: ${uniqueIndices.length}`);
     }
+    
+    console.log(`[handleLoadJobResults] Summary:`, {
+      rawResultsFromBackend: jobResults.results?.length,
+      sortedResultsCount: sortedResults.length,
+      transformedItemsCount: transformedItems.length,
+      totalItemsInJob: totalItems,
+      savedSelectionsKeys: Object.keys(savedSelections),
+      selectionsRestored: selectionsRestored,
+      firstItem: transformedItems[0] ? { itemIndex: transformedItems[0].itemIndex, itemNumber: transformedItems[0].itemNumber } : null,
+      lastItem: transformedItems[transformedItems.length - 1] ? { itemIndex: transformedItems[transformedItems.length - 1].itemIndex, itemNumber: transformedItems[transformedItems.length - 1].itemNumber } : null,
+    });
   };
 
   // Handle when a job is resumed from the jobs panel
@@ -647,14 +784,20 @@ const MultiItemSearch = () => {
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedItems = filteredItems.slice(startIndex, startIndex + itemsPerPage);
 
-  // Calculate stats (only for valid items)
+  // Calculate stats from loaded items (for accurate tab filtering and display)
+  // All counts are based on items we actually have loaded, not the job's total
   const validItemsForStats = items.filter(item => item.isValid !== false);
-  const totalCount = validItemsForStats.length;
+  const totalCount = validItemsForStats.length; // Items we have loaded
   const matchedCount = validItemsForStats.filter(item => item.selectedMatch).length;
   const manualCount = validItemsForStats.filter(item => item.manualOrderingNo).length;
   const notChosenCount = validItemsForStats.filter(item => item.matches.length > 0 && !item.selectedMatch && !item.manualOrderingNo).length;
   const noMatchesCount = validItemsForStats.filter(item => item.matches.length === 0 && !item.manualOrderingNo).length;
   const processedCount = matchedCount + manualCount;
+  
+  // Job total from backend (may be larger than loaded items for partial jobs)
+  const jobTotalItems = jobSummary?.total || totalCount;
+  const isPartialJob = jobSummary && totalCount < jobTotalItems;
+  
   const progressPercentage = totalCount > 0 ? (processedCount / totalCount) * 100 : 0;
 
   // Convert items to quotation format
@@ -725,30 +868,59 @@ const MultiItemSearch = () => {
 
   // Save user's match selections to the job for later retrieval
   const handleSaveProgress = async () => {
+    console.log('[handleSaveProgress] Starting save for job:', lastJobId);
+    console.log('[handleSaveProgress] Items count:', items.length);
+    
     if (!lastJobId) {
       alert('No job to save progress to. Please run a batch search first.');
       return;
     }
 
-    // Build selections object: { itemIndex: selectedMatchId }
-    // Use item.itemIndex if available (from loaded job), otherwise use array index
+    // Build selections object: { itemIndex: selection }
+    // selection can be:
+    //   - a matchId string (e.g., "M0-1") for selected matches
+    //   - an object { matchId, manualOrderingNo } for manual entries
+    // CRITICAL: Use item.itemIndex (the original index from the job) as the key
     const selections = {};
-    items.forEach((item, idx) => {
-      if (item.selectedMatch) {
-        const key = item.itemIndex !== undefined ? item.itemIndex : idx;
+    let savedCount = 0;
+    
+    items.forEach((item, arrayIdx) => {
+      // Use itemIndex if available, otherwise fall back to array index
+      const key = item.itemIndex !== undefined ? String(item.itemIndex) : String(arrayIdx);
+      
+      if (item.selectedMatch && item.manualOrderingNo) {
+        // Both a match selection and manual entry
+        selections[key] = {
+          matchId: item.selectedMatch,
+          manualOrderingNo: item.manualOrderingNo
+        };
+        savedCount++;
+      } else if (item.selectedMatch) {
+        // Just a match selection - save the match ID directly
         selections[key] = item.selectedMatch;
+        savedCount++;
+      } else if (item.manualOrderingNo) {
+        // Just a manual entry
+        selections[key] = {
+          manualOrderingNo: item.manualOrderingNo
+        };
+        savedCount++;
       }
     });
 
-    if (Object.keys(selections).length === 0) {
-      alert('No selections to save. Please select matches for some items first.');
+    console.log('[handleSaveProgress] Selections to save:', { keys: Object.keys(selections), count: savedCount });
+    
+    if (savedCount === 0) {
+      alert('No selections to save. Please select matches or enter ordering numbers for some items first.');
       return;
     }
 
     try {
       setIsLoading(true);
+      console.log('[handleSaveProgress] Calling saveBatchSearchSelections with:', { jobId: lastJobId, selectionsCount: savedCount });
       await saveBatchSearchSelections(lastJobId, selections);
-      alert(`Progress saved! ${Object.keys(selections).length} selection(s) saved. You can return to this job later from the Recent Jobs panel.`);
+      console.log('[handleSaveProgress] Save completed successfully');
+      alert(`Progress saved! ${savedCount} selection(s) saved. You can return to this job later from the Recent Jobs panel.`);
     } catch (error) {
       console.error('Error saving progress:', error);
       alert('Failed to save progress: ' + error.message);
@@ -832,6 +1004,8 @@ const MultiItemSearch = () => {
       setValidationErrors([]);
       setBatchSearchResults(null);
       setSearchError('');
+      setFailedItemErrors([]);
+      setShowFailedItemsPanel(false);
       setCurrentPage(1);
       setActiveTab('all');
       navigate('/dashboard');
@@ -1187,8 +1361,11 @@ const MultiItemSearch = () => {
             {/* Summary Stats */}
             <div className="batch-summary">
               <div className="summary-card">
-                <span className="summary-label">Total Items</span>
-                <span className="summary-value">{totalCount}</span>
+                <span className="summary-label">{isPartialJob ? 'Loaded Items' : 'Total Items'}</span>
+                <span className="summary-value">
+                  {totalCount}
+                  {isPartialJob && <span className="partial-indicator"> / {jobTotalItems}</span>}
+                </span>
               </div>
               <div className="summary-card success">
                 <span className="summary-label">Matched</span>
@@ -1206,7 +1383,67 @@ const MultiItemSearch = () => {
                 <span className="summary-label">No Matches</span>
                 <span className="summary-value">{noMatchesCount}</span>
               </div>
+              {/* Failed Items Badge - only show if there are actual errors */}
+              {failedItemErrors.length > 0 && (
+                <button 
+                  className="failed-items-badge"
+                  onClick={() => setShowFailedItemsPanel(!showFailedItemsPanel)}
+                  title="Click to view failed items"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" y1="8" x2="12" y2="12" />
+                    <line x1="12" y1="16" x2="12.01" y2="16" />
+                  </svg>
+                  <span>{failedItemErrors.length} Error{failedItemErrors.length !== 1 ? 's' : ''}</span>
+                  <span className="badge-chevron">{showFailedItemsPanel ? '▲' : '▼'}</span>
+                </button>
+              )}
             </div>
+
+            {/* Failed Items Panel - collapsible */}
+            {showFailedItemsPanel && failedItemErrors.length > 0 && (
+              <div className="failed-items-panel">
+                <div className="failed-items-header">
+                  <span className="failed-items-title">Failed Items Details</span>
+                  <button 
+                    className="failed-items-close"
+                    onClick={() => setShowFailedItemsPanel(false)}
+                  >
+                    ✕
+                  </button>
+                </div>
+                <div className="failed-items-list">
+                  {failedItemErrors.map((err, idx) => (
+                    <div key={idx} className="failed-item-row">
+                      <div className="failed-item-index">
+                        Item #{err.itemIndex !== undefined ? err.itemIndex + 1 : idx + 1}
+                        {err.query && <span className="failed-item-query"> - "{err.query}"</span>}
+                      </div>
+                      <div className="failed-item-error">{err.error}</div>
+                      {err.timestamp && (
+                        <div className="failed-item-time">{new Date(err.timestamp).toLocaleString()}</div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                {lastJobId && (
+                  <div className="failed-items-actions">
+                    <button 
+                      className="retry-failed-btn"
+                      onClick={handleRetryFailedItems}
+                      disabled={isLoading}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M1 4v6h6M23 20v-6h-6" />
+                        <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15" />
+                      </svg>
+                      Retry Failed Items
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="tabs-section">
               <div className="tabs">
@@ -1217,7 +1454,7 @@ const MultiItemSearch = () => {
                     setCurrentPage(1);
                   }}
                 >
-                  All Items ({totalCount})
+                  All Items ({totalCount}{isPartialJob ? ` of ${jobTotalItems}` : ''})
                 </button>
                 <button
                   className={`tab ${activeTab === 'not-chosen' ? 'active' : ''}`}
@@ -1294,7 +1531,7 @@ const MultiItemSearch = () => {
                               </button>
                             )}
                           </td>
-                          <td>{item.itemNumber}</td>
+                          <td>{item.itemNumber ?? (item.itemIndex !== undefined ? item.itemIndex + 1 : '—')}</td>
                           <td>{item.orderingNumber || '—'}</td>
                           <td>{item.description || '—'}</td>
                           <td>
